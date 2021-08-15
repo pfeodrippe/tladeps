@@ -12,7 +12,9 @@ Clojars. This has the following advantages:
 
 == Installation
 
-WIP
+Install Babashka (https://github.com/babashka/babashka#quickstart).
+
+
 
 == Usage
 
