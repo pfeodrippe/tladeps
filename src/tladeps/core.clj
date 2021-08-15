@@ -15,6 +15,7 @@
   ;; pushed to Maven Central .
   '{pfeodrippe/tla-edn {:mvn/version "0.7.0-SNAPSHOT"}})
 
+;; Open a PR here with your dependency so it stays registered with a shortcut.
 (def default-module-deps
   '{io.github.pfeodrippe/tla-edn-module {:mvn/version "0.2.0-SNAPSHOT"
                                          :tladeps/override "TlaEdnModule.Overrides"
