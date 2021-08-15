@@ -92,30 +92,14 @@ esac
 IFS='.' read -ra VER <<< "$version"
 vernum=$(printf "%03d%03d%03d" "${VER[0]}" "${VER[1]}" "${VER[2]}")
 
-if [[ $vernum -le 000002013 ]]; then
-  ext="zip"
-  util="$(which unzip) -qqo"
-else
-  ext="tar.gz"
-  util="$(which tar) -zxf"
-fi
+filename="tladeps-$version-$platform-$arch.clj"
 
-case "$platform-$static_binary" in
-    linux-true) filename="tladeps-$version-$platform-$arch-static."$ext
-                ;;
-    *-true)     >&2 echo "Static binaries are only available in Linux platform! Using the non-static one..."
-                filename="tladeps-$version-$platform-$arch."$ext
-                ;;
-    *)          filename="tladeps-$version-$platform-$arch."$ext
-                ;;
-esac
-
-download_url="https://github.com/pfeodrippe/tladeps/releases/download/v$version/$filename"
+download_url="https://raw.githubusercontent.com/pfeodrippe/tladeps/master/src/tladeps/core.clj"
 
 # Running this part in a subshell so when it finishes we go back to the previous directory
 mkdir -p "$download_dir" && (
     cd "$download_dir"
-    echo -e "Downloading $download_url to $download_dir"
+    echo -e "Downloading $download_url to $download_dir/tladeps"
 
     curl -o "$filename" -sL "$download_url"
     if [[ -n "$checksum" ]]; then
@@ -126,7 +110,6 @@ mkdir -p "$download_dir" && (
             exit 1
         fi
     fi
-    $util "$filename"
     rm -f "$filename"
 )
 

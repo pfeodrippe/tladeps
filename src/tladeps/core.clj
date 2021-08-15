@@ -1,3 +1,4 @@
+#!/usr/bin/env bb
 (ns tladeps.core
   (:require
    [babashka.deps :as deps]
