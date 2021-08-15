@@ -25,6 +25,7 @@ bash < <(curl -s https://raw.githubusercontent.com/pfeodrippe/tladeps/master/ins
 
 The arguments are the same that you use for TLC or Sany (or any other
 tlatool class), but you can also pass:
+
 - `--tladeps-dep`, you can pass shortcuts for existent and registered
   deps (see the `src/tladeps/core.clj` file);
 - `--tladeps-raw-deps`, pass a EDN map with references to any other
