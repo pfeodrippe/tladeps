@@ -32,6 +32,7 @@
       :validate [shortcuts (str "Available default modules are " shortcuts)]
       :update-fn conj]
      ["" "--tladeps-raw-deps DEPS" "Dependency map in EDN format, e.g '{io.github.pfeodrippe/tla-edn-module {:mvn/version \"0.2.0-SNAPSHOT\" :tladeps/override \"TlaEdnModule.Overrides\"}}'"]
+     ["" "--tladeps-classpath" "Returns only the classpath. You have to add overrides automatically if needed, but this may be more composable if you want to keep using `java -cp ...` command to call tlatools"]
      ["" "--tladeps-help"]]))
 
 (defn java-command
@@ -61,6 +62,7 @@
         args (->> (-> (str/join " " args)
                       (str/replace #"--tladeps-dep [\w-]+" "")
                       (str/replace #"--tladeps-raw-deps" "")
+                      (str/replace #"--tladeps-classpath" "")
                       (str/replace #"\{(.*?)\{(.*?)\}\}" "") ; For inlined deps.
                       str/trim
                       (str/split #" ")))
@@ -71,8 +73,10 @@
                          seq)
                     (-> (:tladeps-raw-deps options) edn/read-string))
         result (deps/clojure (list "-Sdeps" {:deps deps}
-                                   "-Scommand" (java-command {:args args
-                                                              :deps deps}))
+                                   "-Scommand" (if (:tladeps-classpath options)
+                                                 "echo {{classpath}}"
+                                                 (java-command {:args args
+                                                                :deps deps})))
                              {:err :string})]
     ;; Stream stdout.
     (with-open [rdr (io/reader (:out result))]
