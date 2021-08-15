@@ -14,7 +14,11 @@ Clojars. This has the following advantages:
 
 Install Babashka (https://github.com/babashka/babashka#quickstart).
 
+Then install `tladeps`.
 
+----
+bash < <(curl -s https://raw.githubusercontent.com/pfeodrippe/tladeps/master/install)
+----
 
 == Usage
 
