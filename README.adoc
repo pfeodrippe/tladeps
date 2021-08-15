@@ -4,6 +4,7 @@ Non-official simple dependency manager for TLA+.
 
 This CLI is a wrapper over TLC which can fetch modules from Maven or
 Clojars. This has the following advantages:
+
 - Not bloating the TLA+ Community Modules repo;
 - You can use any JVM language to build a TLA+ module (with
   the possibility of overrides!);
