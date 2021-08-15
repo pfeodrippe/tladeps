@@ -29,7 +29,8 @@
       :default #{}
       :validate [shortcuts (str "Available default modules are " shortcuts)]
       :update-fn conj]
-     ["" "--tladeps-raw-deps DEPS" "Dependency map in EDN format, e.g '{io.github.pfeodrippe/tla-edn-module {:mvn/version \"0.2.0-SNAPSHOT\" :tladeps/override \"TlaEdnModule.Overrides\"}}'"]]))
+     ["" "--tladeps-raw-deps DEPS" "Dependency map in EDN format, e.g '{io.github.pfeodrippe/tla-edn-module {:mvn/version \"0.2.0-SNAPSHOT\" :tladeps/override \"TlaEdnModule.Overrides\"}}'"]
+     ["" "--tladeps-help"]]))
 
 (defn java-command
   [{:keys [:args :deps]}]
@@ -44,7 +45,11 @@
 
 (defn -main
   [& args]
-  (let [{:keys [:options :errors]} (cli/parse-opts args cli-options)
+  (let [{:keys [:options :errors :summary]} (cli/parse-opts args cli-options)
+        _ (when (or (empty? args)
+                    (:tladeps-help options))
+            (println (str "Usage:\n" summary))
+            (System/exit 0))
         ;; If all are unknown options, then we pass it to tla2tools.
         _ (when-not (->> errors
                          (every? #(str/starts-with? % "Unknown option")))
