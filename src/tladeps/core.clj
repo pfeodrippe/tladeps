@@ -4,7 +4,8 @@
    [clojure.java.io :as io]
    [clojure.string :as str]
    [clojure.tools.cli :as cli]
-   [clojure.pprint :as pprint])
+   [clojure.pprint :as pprint]
+   [clojure.edn :as edn])
   (:import
    (java.io File)))
 
@@ -14,19 +15,21 @@
   ;; pushed to Maven Central .
   '{pfeodrippe/tla-edn {:mvn/version "0.7.0-SNAPSHOT"}})
 
-(def module-deps
+(def default-module-deps
   '{io.github.pfeodrippe/tla-edn-module {:mvn/version "0.2.0-SNAPSHOT"
                                          :tladeps/override "TlaEdnModule.Overrides"
                                          :tladeps/shortcut "edn"}})
 
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;; CLI ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (def cli-options
-  (let [shortcuts (->> (vals module-deps) (mapv :tladeps/shortcut) set)]
-    [["" "--tladeps-dep DEP" "Port number"
+  (let [shortcuts (->> (vals default-module-deps) (mapv :tladeps/shortcut) set)]
+    [["" "--tladeps-dep DEP" "Dependency shortcut"
       :multi true
       :default #{}
-      :validate [shortcuts (str "Available modules are " shortcuts)]
-      :update-fn conj]]))
+      :validate [shortcuts (str "Available default modules are " shortcuts)]
+      :update-fn conj]
+     ["" "--tladeps-raw-deps DEPS" "Dependency map in EDN format, e.g '{io.github.pfeodrippe/tla-edn-module {:mvn/version \"0.2.0-SNAPSHOT\" :tladeps/override \"TlaEdnModule.Overrides\"}}'"]]))
 
 (defn java-command
   [{:keys [:args :deps]}]
@@ -47,16 +50,19 @@
                          (every? #(str/starts-with? % "Unknown option")))
             (pprint/pprint errors)
             (System/exit 1))
-        ;; Remove our  options from args.
-        args (-> (str/join " " args)
-                 (str/replace #"--tladeps-dep [\w-]+" "")
-                 str/trim
-                 (str/split #" "))
+        ;; Remove our options from args.
+        args (->> (-> (str/join " " args)
+                      (str/replace #"--tladeps-dep [\w-]+" "")
+                      (str/replace #"--tladeps-raw-deps" "")
+                      (str/replace #"\{(.*?)\{(.*?)\}\}" "") ; For inlined deps.
+                      str/trim
+                      (str/split #" ")))
         deps (merge default-deps
-                    (->> module-deps
+                    (->> default-module-deps
                          (filter (comp (:tladeps-dep options) :tladeps/shortcut val))
                          (into {})
-                         seq))
+                         seq)
+                    (-> (:tladeps-raw-deps options) edn/read-string))
         result (deps/clojure (list "-Sdeps" {:deps deps}
                                    "-Scommand" (java-command {:args args
                                                               :deps deps}))
