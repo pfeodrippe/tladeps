@@ -92,7 +92,7 @@ esac
 IFS='.' read -ra VER <<< "$version"
 vernum=$(printf "%03d%03d%03d" "${VER[0]}" "${VER[1]}" "${VER[2]}")
 
-filename="tladeps-$version-$platform-$arch.clj"
+filename="tladeps"
 
 download_url="https://raw.githubusercontent.com/pfeodrippe/tladeps/master/src/tladeps/core.clj"
 
@@ -110,7 +110,7 @@ mkdir -p "$download_dir" && (
             exit 1
         fi
     fi
-    rm -f "$filename"
+    chmod +x "$filename"
 )
 
 if [[ "$download_dir" != "$install_dir" ]]

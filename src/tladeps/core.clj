@@ -85,3 +85,6 @@
     (when (-> @result :err seq)
       (-> @result :err print))
     nil))
+
+(when (= *file* (System/getProperty "babashka.file"))
+  (apply -main *command-line-args*))
