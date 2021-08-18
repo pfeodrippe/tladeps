@@ -1,6 +1,6 @@
 = TLA Deps
 
-Non-official simple dependency manager for TLA+.
+Simple dependency manager for TLA+.
 
 This CLI is a wrapper over TLC which can fetch modules from Maven or
 Clojars. This has the following advantages:
