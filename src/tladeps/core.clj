@@ -20,7 +20,10 @@
 (def default-module-deps
   '{io.github.pfeodrippe/tla-edn-module {:mvn/version "0.2.0-SNAPSHOT"
                                          :tladeps/override "TlaEdnModule.Overrides"
-                                         :tladeps/shortcut "edn"}})
+                                         :tladeps/shortcut "edn"}
+    io.github.pfeodrippe/tla-http-client-module {:mvn/version "0.1.0-SNAPSHOT"
+                                                 :tladeps/override "TlaHttpClientModule.Overrides"
+                                                 :tladeps/shortcut "http-client"}})
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;; CLI ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
