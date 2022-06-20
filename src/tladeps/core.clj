@@ -35,7 +35,7 @@
       :validate [shortcuts (str "Available default modules are " shortcuts)]
       :update-fn conj]
      ["" "--tladeps-raw-deps DEPS" "Dependency map in EDN format, e.g '{io.github.pfeodrippe/tla-edn-module {:mvn/version \"0.2.0-SNAPSHOT\" :tladeps/override \"TlaEdnModule.Overrides\"}}'"]
-     ["" "--tladeps-classpath" "Returns only the classpath. You have to add overrides automatically if needed, but this may be more composable if you want to keep using `java -cp ...` command to call tlatools"]
+     ["" "--tladeps-classpath" "Returns only the classpath. You have to add tladeps overrides manually if needed, but this may be more composable if you want to keep using `java -cp ...` command to call tla tools"]
      ["" "--tladeps-help"]]))
 
 (defn java-command
