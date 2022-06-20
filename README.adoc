@@ -32,8 +32,8 @@ tlatool class), but you can also pass:
   dependencies (see below), it's a scape hatch if the
   dependency/module is not already registered here.
 - `--tladeps-classpath`, returns only the classpath. You have to add
-  overrides automatically if needed, but this may be more composable
-  if you want to keep using `java -cp ...` command to call tlatools.
+  overrides manually if needed, but this may be more composable
+  if you want to keep using `java -cp ...` command to call tla tools.
 
 See examples below.
 
