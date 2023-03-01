@@ -8,8 +8,8 @@ Clojars. This has the following advantages:
 - Not bloating the TLA+ Community Modules repo;
 - You can use any JVM language to build a TLA+ module (with
   the possibility of overrides!);
-- No need for custom repository, just use JVM ones;
-- Ease for sharing(Perhaps? Let's see if someone will use it).
+- No need for custom repository, just use the ones you are used to, e.g. maven or clojars;
+- Ease  sharing(Perhaps? Let's see if someone will use it).
 
 == Installation
 
