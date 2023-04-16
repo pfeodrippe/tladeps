@@ -1,0 +1,13 @@
+{:source-paths ["webapp"]
+
+ :dev-http {8030 "webapp/resources/public"}
+
+ :builds {:app {:target :browser
+                :output-dir "webapp/resources/public/compiled"
+                :asset-path "/compiled"
+                :modules {:main {:init-fn tladeps.main/main!
+                                 :entries [tladeps.main]}}
+                :devtools {:after-load tladeps.main/refresh}}}
+ :dependencies [[binaryage/devtools "1.0.7"]
+                [cider/cider-nrepl "0.30.0"]
+                [rum "0.12.10"]]}
