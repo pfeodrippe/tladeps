@@ -8,6 +8,8 @@
                 :modules {:main {:init-fn tladeps.main/main!
                                  :entries [tladeps.main]}}
                 :devtools {:after-load tladeps.main/refresh}}}
+
  :dependencies [[binaryage/devtools "1.0.7"]
                 [cider/cider-nrepl "0.30.0"]
-                [rum "0.12.10"]]}
+                [rum "0.12.10"]
+                [funcool/promesa "10.0.594"]]}
