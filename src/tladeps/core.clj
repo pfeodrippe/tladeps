@@ -18,12 +18,15 @@
 
 ;; Open a PR here with your dependency so it stays registered with a shortcut.
 (def default-module-deps
-  '{io.github.pfeodrippe/tla-edn-module {:mvn/version "0.2.0-SNAPSHOT"
-                                         :tladeps/override "TlaEdnModule.Overrides"
-                                         :tladeps/shortcut "edn"}
-    io.github.pfeodrippe/tla-http-client-module {:mvn/version "0.1.0-SNAPSHOT"
-                                                 :tladeps/override "TlaHttpClientModule.Overrides"
-                                                 :tladeps/shortcut "http-client"}})
+  '{io.github.pfeodrippe/tladeps-edn-module
+    {:mvn/version "0.3.0"
+     :tladeps/override "TlaEdnModule.Overrides"
+     :tladeps/shortcut "edn"}
+
+    io.github.pfeodrippe/tladeps-http-client-module
+    {:mvn/version "0.2.0"
+     :tladeps/override "TlaHttpClientModule.Overrides"
+     :tladeps/shortcut "http-client"}})
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;; CLI ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -34,7 +37,7 @@
       :default #{}
       :validate [shortcuts (str "Available default modules are " shortcuts)]
       :update-fn conj]
-     ["" "--tladeps-raw-deps DEPS" "Dependency map in EDN format, e.g '{io.github.pfeodrippe/tla-edn-module {:mvn/version \"0.2.0-SNAPSHOT\" :tladeps/override \"TlaEdnModule.Overrides\"}}'"]
+     ["" "--tladeps-raw-deps DEPS" "Dependency map in EDN format, e.g '{io.github.pfeodrippe/tladeps-edn-module {:mvn/version \"0.3.0\" :tladeps/override \"TlaEdnModule.Overrides\"}}'"]
      ["" "--tladeps-classpath" "Returns only the classpath. You have to add tladeps overrides manually if needed, but this may be more composable if you want to keep using `java -cp ...` command to call tla tools"]
      ["" "--tladeps-help"]]))
 
