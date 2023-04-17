@@ -44,8 +44,8 @@
          (for [{:keys [jar_name group_name version description]}
                (sort-by :jar_name deps)
                :when (if (seq (str/trim search))
-                       (or (str/includes? group_name search)
-                           (str/includes? jar_name search))
+                       (or (str/includes? (str/lower-case group_name) search)
+                           (str/includes? (str/lower-case jar_name) search))
                        true)]
            [:.grid.gap-1 {:key (str group_name jar_name)}
             [:div
@@ -81,7 +81,7 @@
       {:placeholder "Search..."
        :value search
        :on-change #(set-search! (.. % -target -value))}]
-     (deps-view {:search search})]))
+     (deps-view {:search (str/lower-case search)})]))
 
 (rum/defc app
   []
