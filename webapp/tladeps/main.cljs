@@ -55,13 +55,29 @@
             [:span.text-xs
              [:span.text-accent "v"]
              [:b [:span version]]]]))
-        [:b [:span.text-error "No TLA+ deps found!"]])])))
+        [:b [:span.text-error "No TLA deps found!"]])])))
 
 (rum/defc search-view
   []
   (let [[search set-search!] (rum/use-state "")]
-    [:.grid.gap-4.p-24
-     [:input.input.input-bordered.w-full.max-w-xs
+    [:.grid.gap-4.p-6.lg:p-24
+     [:span
+      [:span.text-2xl
+       "Hi 👋 "]
+      [:br]
+      [:span.text-xl
+       [:span.text-lg.bg-gray-700.rounded-lg  {:style {:margin-left "-3px"}}
+        [:span.p-3
+         [:span.text-primary.lowercase
+          "TLA+"]
+         [:span.text-base-content.uppercase
+          "deps"]]]
+       " is a project aimed at making TLA+ dependencies more decentralized. "
+       "It's best used with the TLA+ VSCode extension."]]
+
+     [:span.text-secondary.text-sm
+      "This project is an experiment and it's not related to the TLA+ foundation or TLA+ ownership (at the moment)."]
+     [:input.input.input-bordered
       {:placeholder "Search..."
        :value search
        :on-change #(set-search! (.. % -target -value))}]
@@ -70,7 +86,7 @@
 (rum/defc app
   []
   [:div
-   [:.navbar.bg-base-100
+   [:.navbar.bg-base-300
     [:a {:class "btn btn-ghost normal-case text-xl"}
      [:span.text-primary.lowercase
       "TLA+"]
@@ -103,6 +119,5 @@
 ;; - [x] Present the deps
 ;; - [x] Filter deps
 ;; - [x] Deploy to tladeps.org
-;; - [ ] Center search view a little bit more
-;; - [ ] Make it work for mobile
+;; - [x] Make it work for mobile
 ;; - [ ] Copy the dep in a way that the VSCode extension understands

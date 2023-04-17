@@ -2,7 +2,7 @@ name: publish-tladeps-website
 
 on:
   push:
-    branches: [main]
+    branches: [webapp, main]
 
 jobs:
   build:

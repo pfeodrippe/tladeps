@@ -68,5 +68,5 @@ an operator. See
 https://github.com/pfeodrippe/tla-edn-module/blob/master/src/tla_edn_module/core.clj#L22.
 
 ----
-tladeps --tladeps-raw-deps '{io.github.pfeodrippe/tla-edn-module {:mvn/version "0.2.0-SNAPSHOT" :tladeps/override "TlaEdnModule.Overrides"}}' tlc2.TLC Abc.tla -config Abc.tla
+tladeps --tladeps-raw-deps '{io.github.pfeodrippe/tladeps-edn-module {:mvn/version "0.3.0" :tladeps/override "TlaEdnModule.Overrides"}}' tlc2.TLC Abc.tla -config Abc.tla
 ----
