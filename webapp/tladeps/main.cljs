@@ -76,7 +76,7 @@
        "It's best used with the TLA+ VSCode extension."]]
 
      [:span.text-secondary.text-sm
-      "This project is an experiment and it's not related to the TLA+ foundation or TLA+ ownership (at the moment)."]
+      "This project is an experiment and it's not related to the TLA+ foundation or TLA+ ownership."]
      [:input.input.input-bordered
       {:placeholder "Search..."
        :value search
