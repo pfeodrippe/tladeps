@@ -102,7 +102,7 @@
 ;; - [x] Fetch the deps
 ;; - [x] Present the deps
 ;; - [x] Filter deps
-;; - [ ] Deploy to tladeps.org
+;; - [x] Deploy to tladeps.org
 ;; - [ ] Center search view a little bit more
 ;; - [ ] Make it work for mobile
 ;; - [ ] Copy the dep in a way that the VSCode extension understands
