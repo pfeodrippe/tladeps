@@ -4,7 +4,8 @@
    [rum.core :as rum]
    ["react-dom/client" :as dom-client]
    [promesa.core :as p :include-macros true]
-   [cljs.pprint :as pp]))
+   [cljs.pprint :as pp]
+   [clojure.edn :as edn]))
 
 (defn grid-template-areas
   [grid]
@@ -31,6 +32,23 @@
              body (.json res)]
        (js->clj body :keywordize-keys true)))))
 
+(defn build-tladeps-command
+  [{:keys [group_name jar_name version]}]
+  (p/let [module-res (js/fetch (str "https://clojars.org/api/artifacts/"
+                                    group_name "/" jar_name))
+          module-body (.json module-res)
+          body (p/->
+                (js/fetch (:homepage (js->clj module-body :keywordize-keys true)))
+                .text)]
+    (let [deps
+          {(symbol (str group_name "/" jar_name))
+           {:mvn/version version
+            :tladeps/override (:tladeps/override (edn/read-string body))}}]
+      (.writeText js/navigator.clipboard
+                  (str "tladeps --tladeps-classpath --tladeps-raw-deps '"
+                       (pr-str deps)
+                       "'")))))
+
 (rum/defc deps-view
   [{:keys [search]}]
   (let [[deps set-deps!] (rum/use-state nil)]
@@ -38,23 +56,31 @@
                             (set-deps! (:results deps)))
                           (fn [])))
     (when deps
-      [:.grid.gap-8
+      [:.grid.gap-10
        (or
         (seq
-         (for [{:keys [jar_name group_name version description]}
+         (for [{:keys [jar_name group_name version description]
+                :as jar-info}
                (sort-by :jar_name deps)
                :when (if (seq (str/trim search))
                        (or (str/includes? (str/lower-case group_name) search)
                            (str/includes? (str/lower-case jar_name) search))
                        true)]
-           [:.grid.gap-1 {:key (str group_name jar_name)}
-            [:div
+           [:.grid.gap-1 (merge (-> (grid-template-areas
+                                     [[:a :b]
+                                      [:c :b]])
+                                    (style {:grid-template-columns "1fr 1fr"}))
+                                {:key (str group_name jar_name)})
+            [:span (grid-area :a)
              [:span.opacity-60 group_name]
              " "
              [:b [:span.text-primary jar_name]]]
-            [:span.text-xs
+            [:span.text-xs (grid-area :c)
              [:span.text-accent "v"]
-             [:b [:span version]]]]))
+             [:b [:span version]]]
+            [:button.btn.btn-wide (merge (grid-area :b)
+                                         {:on-click #(build-tladeps-command jar-info)})
+             "Copy"]]))
         [:b [:span.text-error "No TLA deps found!"]])])))
 
 (def tla-deps
@@ -63,6 +89,12 @@
     "TLA+"]
    [:span.text-base-content.uppercase
     "deps"]])
+
+(rum/defc link
+  [{:keys [href]} & args]
+  [:a.text-accent {:href href
+                   :target "_blank"}
+   args])
 
 (rum/defc search-view
   []
@@ -82,33 +114,46 @@
      [:span.text-lg.text-secondary
       "Instructions"]
 
-     [:span
-      [:span.text-md
+     [:span.text-md
+      [:span
        "Install "
-       [:a.text-accent {:href "https://github.com/babashka/babashka#quickstart"
-                        :target "_blank"}
-        "babashka"]
+       (link {:href "https://github.com/babashka/babashka#quickstart"}
+             "babashka")
        " and "
-       [:a.text-accent {:href "https://github.com/pfeodrippe/tladeps#installation"
-                        :target "_blank"}
-        "tladeps"]
+       (link {:href "https://github.com/pfeodrippe/tladeps#installation"}
+             "tladeps")
        "."]
       [:br]
-      [:span.text-md
+
+      [:span
        "Copy one of the modules below, you will have a command to run."]
       [:br]
-      [:span.text-md
-       "Run it in your terminal and copy the result, this is your "
+
+      [:span
+       "Run it in your terminal and copy the result, this will download the necessary deps and it will return the "
        [:b "classpath"]
-       "."]]
+       "."]
+      [:br]
+      [:br]
+
+      [:span
+       "The "
+       (link {:href "https://github.com/tlaplus/vscode-tlaplus"}
+             "VSCode extension")
+       " lets you add deps to the classpath, see the "
+       (link {:href "https://github.com/tlaplus/vscode-tlaplus/wiki/Java-Options"}
+             "Java Options")
+       ", with it you should be able to use any deps you find here in this page, e.g. try the EDN module below, check "
+       (link {:href "https://github.com/pfeodrippe/tla-edn-module"}
+             "the repo")
+       " for instructions on how to use this module."]]
 
      [:.divider]
 
-     [:span.text-sm
-      ""]
+     [:span.text-warning-sm
+      "This project is an experiment and it's not related to the TLA+ foundation or TLA+ ownership."]
+     [:br]
 
-     [:span.text-warning.text-sm
-      "This project is an experiment and it's not related to the TLA+ foundation or TLA+ ownership (at the moment)."]
      [:input.input.input-bordered
       {:placeholder "Search..."
        :value search
@@ -152,4 +197,4 @@
 ;; - [x] Filter deps
 ;; - [x] Deploy to tladeps.org
 ;; - [x] Make it work for mobile
-;; - [ ] Copy the dep in a way that the VSCode extension understands
+;; - [x] Copy the dep in a way that the VSCode extension understands
