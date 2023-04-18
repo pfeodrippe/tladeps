@@ -45,7 +45,7 @@
            {:mvn/version version
             :tladeps/override (:tladeps/override (edn/read-string body))}}]
       (.writeText js/navigator.clipboard
-                  (str "tladeps --tladeps-classpath --tladeps-raw-deps '"
+                  (str "tladeps --tladeps-vscode --tladeps-raw-deps '"
                        (pr-str deps)
                        "'")))))
 

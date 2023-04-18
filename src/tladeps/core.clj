@@ -39,12 +39,14 @@
       :update-fn conj]
      ["" "--tladeps-raw-deps DEPS" "Dependency map in EDN format, e.g '{io.github.pfeodrippe/tladeps-edn-module {:mvn/version \"0.3.0\" :tladeps/override \"TlaEdnModule.Overrides\"}}'"]
      ["" "--tladeps-classpath" "Returns only the classpath. You have to add tladeps overrides manually if needed, but this may be more composable if you want to keep using `java -cp ...` command to call tla tools"]
+     ["" "--tladeps-vscode" "Returns a Java options for the TLA+ VSCode extension"]
      ["" "--tladeps-help"]]))
 
 (defn java-command
-  [{:keys [:args :deps]}]
+  [{:keys [:args :deps :java]
+    :or {java true}}]
   (let [overrides (->> deps vals (mapv :tladeps/override) (str/join File/pathSeparator))]
-    (->> ["java"
+    (->> [(when java "java")
           (if (seq overrides)
             (str "-Dtlc2.overrides.TLCOverrides=" overrides)
             "")
@@ -69,6 +71,7 @@
                       (str/replace #"--tladeps-dep [\w-]+" "")
                       (str/replace #"--tladeps-raw-deps" "")
                       (str/replace #"--tladeps-classpath" "")
+                      (str/replace #"--tladeps-vscode" "")
                       (str/replace #"\{(.*?)\{(.*?)\}\}" "") ; For inlined deps.
                       str/trim
                       (str/split #" ")))
@@ -79,8 +82,17 @@
                          seq)
                     (-> (:tladeps-raw-deps options) edn/read-string))
         result (deps/clojure (list "-Sdeps" {:deps deps}
-                                   "-Scommand" (if (:tladeps-classpath options)
+                                   "-Scommand" (cond
+                                                 (:tladeps-classpath options)
                                                  "echo {{classpath}}"
+
+                                                 (:tladeps-vscode options)
+                                                 (str "echo "
+                                                      (java-command {:args args
+                                                                     :deps deps
+                                                                     :java false}))
+
+                                                 :else
                                                  (java-command {:args args
                                                                 :deps deps})))
                              {:err :string})]
