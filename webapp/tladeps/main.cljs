@@ -57,6 +57,13 @@
              [:b [:span version]]]]))
         [:b [:span.text-error "No TLA deps found!"]])])))
 
+(def tla-deps
+  [:span.p-3
+   [:span.text-primary.lowercase
+    "TLA+"]
+   [:span.text-base-content.uppercase
+    "deps"]])
+
 (rum/defc search-view
   []
   (let [[search set-search!] (rum/use-state "")]
@@ -67,16 +74,41 @@
       [:br]
       [:span.text-xl
        [:span.text-lg.bg-gray-700.rounded-lg  {:style {:margin-left "-3px"}}
-        [:span.p-3
-         [:span.text-primary.lowercase
-          "TLA+"]
-         [:span.text-base-content.uppercase
-          "deps"]]]
+        tla-deps]
        " is a project aimed at making TLA+ dependencies more decentralized. "
-       "It's best used with the TLA+ VSCode extension."]]
+       "It's best used with the TLA+ VSCode extension, see below."]]
 
-     [:span.text-secondary.text-sm
-      "This project is an experiment and it's not related to the TLA+ foundation or TLA+ ownership."]
+     [:.divider]
+     [:span.text-lg.text-secondary
+      "Instructions"]
+
+     [:span
+      [:span.text-md
+       "Install "
+       [:a.text-accent {:href "https://github.com/babashka/babashka#quickstart"
+                        :target "_blank"}
+        "babashka"]
+       " and "
+       [:a.text-accent {:href "https://github.com/pfeodrippe/tladeps#installation"
+                        :target "_blank"}
+        "tladeps"]
+       "."]
+      [:br]
+      [:span.text-md
+       "Copy one of the modules below, you will have a command to run."]
+      [:br]
+      [:span.text-md
+       "Run it in your terminal and copy the result, this is your "
+       [:b "classpath"]
+       "."]]
+
+     [:.divider]
+
+     [:span.text-sm
+      ""]
+
+     [:span.text-warning.text-sm
+      "This project is an experiment and it's not related to the TLA+ foundation or TLA+ ownership (at the moment)."]
      [:input.input.input-bordered
       {:placeholder "Search..."
        :value search
