@@ -146,11 +146,21 @@
        ", with it you should be able to use any deps you find here in this page, e.g. try the EDN module below, check "
        (link {:href "https://github.com/pfeodrippe/tla-edn-module"}
              "the repo")
-       " for instructions on how to use this module."]]
+       " for instructions on how to use this module."]
+
+      [:br]
+      [:br]
+      [:iframe {:width "560"
+                :height "315"
+                :src "https://www.youtube.com/embed/C_Lgf8Boai8"
+                :title "YouTube video player"
+                :frameborder "0"
+                :allow "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                :allowfullscreen true}]]
 
      [:.divider]
 
-     [:span.text-warning-sm
+     [:span.text-warning
       "This project is an experiment and it's not related to the TLA+ foundation or TLA+ ownership."]
      [:br]
 
