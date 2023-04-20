@@ -1,0 +1,14 @@
+{:deps
+ {com.pulumi/pulumi {:mvn/version "0.9.1"}
+  com.pulumi/aws {:mvn/version "5.36.1"}
+  org.clojure/java.data {:mvn/version "1.0.95"}}
+
+ :aliases
+ {
+  ;; Run with clj -T:build function-in-build
+  :build {:deps {io.github.clojure/tools.build {:git/tag "v0.9.4" :git/sha "76b78fe"}}
+          :ns-default build}
+
+  :dev {:extra-deps {io.github.clojure/tools.build {:git/tag "v0.9.4" :git/sha "76b78fe"}}}}
+
+ :paths ["src"]}
