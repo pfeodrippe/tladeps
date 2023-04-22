@@ -1,7 +1,8 @@
 {:deps
  {com.pulumi/pulumi {:mvn/version "0.9.1"}
   com.pulumi/aws {:mvn/version "5.36.1"}
-  org.clojure/java.data {:mvn/version "1.0.95"}}
+  org.clojure/java.data {:mvn/version "1.0.95"}
+  metosin/jsonista {:mvn/version "0.3.7"}}
 
  :aliases
  {
