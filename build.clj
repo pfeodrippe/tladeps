@@ -19,7 +19,7 @@
   (clean nil)
   (b/compile-clj {:basis basis
                   :src-dirs ["src"]
-                  :ns-compile '[tladeps.main]
+                  :ns-compile '[tladeps.infra]
                   :class-dir class-dir})
   (b/write-pom {:class-dir class-dir
                 :lib lib
