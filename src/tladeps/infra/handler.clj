@@ -13,8 +13,8 @@
   []
   {:tladeps-bucket
    {::ro/id :tladeps-dbucket
-    ::s3/Bucket.acl "private"
-    ::s3/Bucket.tags {:Eita "danado"
+    ::s3/Bucket_acl "private"
+    ::s3/Bucket_tags {:Eita "danado"
                       "Ss" "asda"}
     #_ #_::s3/Bucket.website "sss"}})
 
