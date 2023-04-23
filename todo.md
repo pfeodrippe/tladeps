@@ -1,8 +1,11 @@
 ## Pulumi
 
 - [ ] Could we create resources using namespaced keywords?
-  - [ ] Make it work for bucket
+  - [x] Make it work for bucket
+  - [x] Get all attr values for a resource
   - [ ] Autocompletion
+  - [ ] Make it work for Bucket.website
+  - [ ] Check using another registry, e.g. Github
   - [ ] It could be one map that's parsed
     - Like integrant
     - https://github.com/weavejester/integrant#composite-keys
@@ -14,10 +17,11 @@
   - [ ] `tladeps.edn` file from resources
   - [ ] https://repo.clojars.org/io/github/pfeodrippe/tladeps-edn-module/0.4.0/tladeps-edn-module-0.4.0.pom
   - [ ] Scrap new POMs or continue filtering by `tladeps`?
-- [ ] Create wrapper for Clojure?
-  - [ ] How to scrap the docs?
-  - [ ] How to get autocompletion?
+- [x] Create wrapper for Clojure?
+  - [x] How to scrap the docs?
+  - [x] How to get autocompletion?
 - [ ] Serialize cljs code?
+- [ ] Navigate with Portal through resource attributes
 
 ## Other
 - [ ] Typescript types in CLJ

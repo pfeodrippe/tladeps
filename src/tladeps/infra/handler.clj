@@ -4,6 +4,7 @@
    [rosca.main :as ro])
   (:import
    (com.pulumi.core Output)
+   (com.pulumi.core.internal Internal)
    (com.pulumi.core.annotations ResourceType)
    (com.pulumi.test Mocks Mocks$ResourceResult PulumiTest)
    (java.util.function Consumer)))
@@ -11,15 +12,23 @@
 (defn infra-map
   []
   {:tladeps-bucket
-   {::s3/Bucket.acl "private"
-    ::s3/Bucket.tags {"Eita" "danado"
-                      "Ss" "asda"}}})
+   {::ro/id :tladeps-dbucket
+    ::s3/Bucket.acl "private"
+    ::s3/Bucket.tags {:Eita "danado"
+                      "Ss" "asda"}
+    #_ #_::s3/Bucket.website "sss"}})
 
 (defn infra-handler
   [ctx]
   #_(.. ctx log (info (str ctx)))
-  (let [{:keys [tladeps-bucket]} (ro/build-system (infra-map))]
-    (.. ctx (export "bucket-name" (.bucket tladeps-bucket)))))
+  (let [{:keys [tladeps-bucket]} (ro/build-infra (infra-map))]
+    #_(ro/resource-attrs tladeps-bucket
+                         (fn [v]
+                           (spit "fff.edn"
+                                 (with-out-str
+                                   (clojure.pprint/pprint v)))))
+    (.. ctx (export "bucket-name"
+                    (.bucket tladeps-bucket)))))
 
 (defn make-consumer
   []
@@ -48,10 +57,6 @@
 
   (->> (.. (run-test my-mocks infra-handler)
            resources)
-       (mapv bean))
+       (mapv (comp deref ro/resource-attrs)))
 
   ())
-
-(when-not (System/getenv "PULUMI_MONITOR")
-  (require '[tladeps.infra.build :as infra.build])
-  (eval '(infra.build/copy-dir nil)))
