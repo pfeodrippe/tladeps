@@ -4,9 +4,7 @@
    [clojure.string :as str])
   (:import
    (com.pulumi.core.annotations ResourceType)
-   (com.pulumi.test PulumiTest)
-   #_(org.reflections Reflections)
-   #_(org.reflections.scanners SubTypesScanner)))
+   (com.pulumi.test PulumiTest)))
 
 (defn- class-method
   ([^Class klass ^String method-name]
@@ -22,32 +20,21 @@
   (some-> (.getAnnotation klass ResourceType)
           .type))
 
-#_(-> @aws-schema
-      (get "resources")
-      (get "aws:s3/bucket:Bucket")
-      (get "inputProperties")
-      )
+(defn- prop->attr
+  [klass prop]
+  (keyword (-> (.getPackageName klass)
+               (str/replace #"com.pulumi." "rosca."))
+           (str (.getSimpleName klass)
+                "_"
+                prop)))
 
-(comment
-
-  (def reflections
-    (Reflections. "com.pulumi" (into-array org.reflections.scanners.Scanner [])))
-
+(defn- resource-name->klass
+  [reflections resource-name]
   (->> (sort-by str (into [] (.. reflections (getTypesAnnotatedWith ResourceType))))
-       (filter (comp #{"aws:imagebuilder/infrastructureConfiguration:InfrastructureConfiguration"}
-                     klass->resource-type)))
+       (filter (comp #{resource-name} klass->resource-type))
+       first))
 
-  (->> (->> (-> @aws-schema
-                (get "resources"))
-            (take 3))
-       (mapv (fn [[resource-name props]]
-               [resource-name (-> props
-                                  (get "inputProperties"))]))
-       (into (sorted-map)))
-
-  ())
-
-(defn- klass->properties
+(defn- klass->input-properties
   [klass]
   (->> (-> @aws-schema
            (get "resources")
@@ -55,8 +42,28 @@
            (get "inputProperties"))
        (into (sorted-map))))
 
+(comment
+
+  (do
+    (import '(org.reflections Reflections))
+    (import '(org.reflections.scanners SubTypesScanner))
+
+    (defonce reflections
+      (Reflections. "com.pulumi" (into-array org.reflections.scanners.Scanner [])))
+
+    (->> (-> @aws-schema (get "resources"))
+         (mapv (fn [[resource-name _props]]
+                 (let [klass (resource-name->klass reflections resource-name)
+                       input-props (keys (klass->input-properties klass))]
+                   [klass (->> input-props
+                               (mapv (partial prop->attr klass)))])))
+         (into (sorted-map-by (fn [k1 k2]
+                                (compare (.getName k1) (.getName k2)))))))
+
+  ())
+
 (defn- build-on [instance ^Class klass props]
-  (let [properties (klass->properties klass)]
+  (let [properties (klass->input-properties klass)]
     (reduce-kv (fn [_builder k v]
                  (let [values (cond
                                 (sequential? v)
@@ -92,9 +99,9 @@
 
 (defn- adapt-prop
   [[k v]]
-  (let [[k-name k-ns] ((juxt namespace name) k)
-        [klass-simple-name attr] (str/split k-ns #"\.")]
-    {:klass (-> (str/replace k-name #"rosca." "com.pulumi.")
+  (let [[k-ns k-name] ((juxt namespace name) k)
+        [klass-simple-name attr] (str/split k-name #"_")]
+    {:klass (-> (str/replace k-ns #"rosca." "com.pulumi.")
                 (str "." klass-simple-name)
                 Class/forName)
      :m {attr v}}))
@@ -128,17 +135,11 @@
    (resource-attrs resource identity))
   ([resource resource-handler]
    (let [klass (class resource)
-         props (keys (klass->properties klass))
+         props (keys (klass->input-properties klass))
          prom (promise)]
      (if (empty? props)
        (deliver prom {::id (.getResourceName resource)})
-       (let [->keyword (fn [prop]
-                         (keyword (-> (.getPackageName klass)
-                                      (str/replace #"com.pulumi." "rosca."))
-                                  (str (.getSimpleName klass)
-                                       "."
-                                       prop)))
-             *keeper (atom {})]
+       (let [*keeper (atom {})]
          ;; I've tried to use `Output/all`, but Pulumi was complaining about it.
          (add-watch *keeper ::keeper (fn [_key _reference _old-v new-v]
                                        (when (= (count new-v) (count props))
@@ -149,7 +150,7 @@
                                                               {::id (.getResourceName resource)}))
                                          (resource-handler @prom))))
          (->> props
-              (mapv #(let [attr (->keyword %)]
+              (mapv #(let [attr (prop->attr klass %)]
                        (try
                          (some-> (.invoke (class-method klass %) resource nil)
                                  (.applyValue (reify java.util.function.Function
@@ -167,15 +168,11 @@
 
   (def bucket (:bucket
                (build-infra {:bucket
-                             {:rosca.aws.s3/Bucket.acl "private"
-                              :rosca.aws.s3/Bucket.tags {"Eita" "danado"}}})))
+                             {:rosca.aws.s3/Bucket_acl "private"
+                              :rosca.aws.s3/Bucket_tags {"Eita" "danado"}}})))
 
-  (resource-attrs bucket)
+  @(resource-attrs bucket)
 
-  (klass->properties (class bucket))
-
-  (bean com.pulumi.aws.s3.BucketArgs)
-  (bean com.pulumi.aws.s3.Bucket)
-  (bean com.pulumi.resources.CustomResourceOptions)
+  (klass->input-properties (class bucket))
 
   ())
