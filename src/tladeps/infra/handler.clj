@@ -1,6 +1,9 @@
 (ns tladeps.infra.handler
   (:require
+   [clojure.java.io :as io]
    [rosca.aws.s3 :as-alias s3]
+   [rosca.aws.lambda :as-alias lambda]
+   [rosca.aws.iam :as-alias iam]
    [rosca.main :as ro])
   (:import
    (com.pulumi.core Output)
@@ -16,7 +19,18 @@
     ::s3/Bucket_acl "private"
     ::s3/Bucket_tags {:Eita "danado"
                       "Ss" "asda"}
-    ::s3/Bucket_versioning {::s3/BucketVersioning_enabled true}}})
+    ::s3/Bucket_versioning {::s3/BucketVersioning_enabled true}}
+
+   :proxy
+   {::lambda/Function_runtime "python3.7"
+    ::lambda/Function_handler "hello.handler"
+    ::lambda/Function_code (com.pulumi.asset.AssetArchive. {"." (com.pulumi.asset.FileArchive. "./hello_lambda")})
+    ::lambda/Function_role {::ro/id :lambda-role
+                            ;; TODO: This adapter should be attached to the value, not to the resource.
+                            ::ro/adapter #(.arn %)
+                            ;; TODO: How to slurp this resource with the maven plugin?
+                            ::iam/Role_assumeRolePolicy "{\n  \"Version\": \"2012-10-17\",\n  \"Statement\": [\n    {\n      \"Action\": \"sts:AssumeRole\",\n      \"Principal\": {\n        \"Service\": \"lambda.amazonaws.com\"\n      },\n      \"Effect\": \"Allow\",\n      \"Sid\": \"\"\n    }\n  ]\n}\n"
+                            #_(slurp (io/resource "tladeps/infra/lambda_role_policy.json"))}}})
 
 (defn infra-handler
   [ctx]

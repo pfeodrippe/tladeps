@@ -10,7 +10,8 @@
     - https://github.com/weavejester/integrant#composite-keys
   - [x] Each key has a defined type which it's derived from docs
   - https://github.com/pulumi/pulumi-java/blob/main/tests/examples/testing-unit-java/src/main/java/com/pulumi/example/unittest/WebserverInfra.java
-- [ ] Add lambda
+- [ ] Proxy
+  - [ ] Deploy lambda
   - [ ] Get more info from clojars
   - [ ] `tladeps.edn` file from resources
   - [ ] https://repo.clojars.org/io/github/pfeodrippe/tladeps-edn-module/0.4.0/tladeps-edn-module-0.4.0.pom
@@ -28,6 +29,17 @@
 - [ ] Make autocompletion for inputs work
 - [ ] clj-kondo linting for static values
 - [ ] Check schema as early as possible
+- [ ] Use Route53 instead of google domains?
+  - [ ] Or manage things in google domains using Pulumi?
+- [ ] Better error handling for async test
+
+## TLA+
+- [ ] Run TLA+ online
+  - [ ] Multiple runs
+  - [ ] Small specs
+  - [ ] Try it out
+    - [ ] Like we had with Guima
+- [ ] Visual Editor?
 
 ## Other
 - [ ] Typescript types in CLJ

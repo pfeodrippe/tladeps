@@ -41,6 +41,19 @@
            (get (str/replace $ref #"#/types/" "")))
        (into (sorted-map))))
 
+(comment
+
+  ($ref->json-schema
+   (-> (klass->input-properties com.pulumi.aws.lambda.Function)
+       (get "role")
+       ))
+
+  (-> @aws-schema
+      (get "types")
+      count)
+
+  ())
+
 (defn- args-klass->$ref
   [args-klass]
   (let [package (-> (.getPackageName args-klass)
@@ -92,14 +105,6 @@
        sort
        (take 100))
 
-  ($ref->json-schema
-   (-> (klass->input-properties com.pulumi.aws.s3.Bucket)
-       (get "versioning")
-       (get "$ref")))
-
-  (bean com.pulumi.aws.s3.BucketArgs$Builder)
-  (bean com.pulumi.aws.s3.inputs.BucketVersioningArgs)
-
   ())
 
 (comment
@@ -113,13 +118,15 @@
       (Reflections. "com.pulumi" (into-array org.reflections.scanners.Scanner [])))
 
     (->> (-> @aws-schema (get "resources"))
+         #_(take 3)
          (mapv (fn [[resource-name _props]]
                  (let [klass (resource-name->klass reflections resource-name)
                        input-props (keys (klass->input-properties klass))]
                    [klass (->> input-props
                                (mapv (partial prop->attr klass)))])))
          (into (sorted-map-by (fn [k1 k2]
-                                (compare (.getName k1) (.getName k2)))))))
+                                (compare (.getName k1) (.getName k2))))))
+    nil)
 
   ())
 
@@ -138,19 +145,41 @@
                    Class/forName))
       :m {attr v}})))
 
+(defn- find-klass-method
+  [klass type prop]
+  (->> (bean klass)
+       :declaredMethods
+       (filter (comp #{prop} #(.getName %)))
+       (filter (fn [v]
+                 (->> (.getParameters v)
+                      (mapv #(.getType %))
+                      (filter #(isa? type %))
+                      seq)))
+       first))
+
+(declare build-infra)
+
 (defn- build-on [instance ^Class klass props]
   (let [properties (klass->input-properties klass)]
     (reduce-kv (fn [_builder k v]
                  (let [$ref (get-in properties [(name k) "$ref"])
+                       pulumi? (str/starts-with? (.getName (class v)) "com.pulumi")
                        values (cond
+                                pulumi?
+                                [v]
+
                                 $ref
-                                (let [props (->> (mapv #(adapt-prop % {:input true}) v)
-                                                 (mapv :m)
-                                                 (apply merge))
-                                      klass ($ref->arg-klass $ref)]
-                                  [(-> (.invoke ^java.lang.reflect.Method (class-method klass "builder") nil nil)
-                                       (build-on klass props)
-                                       .build)])
+                                (if (::id v)
+                                  ;; It's a standalone resource.
+                                  [(:_bogus (build-infra {:_bogus v}))]
+                                  ;; Otherwise it's an Args.
+                                  (let [props (->> (mapv #(adapt-prop % {:input true}) v)
+                                                   (mapv :m)
+                                                   (apply merge))
+                                        klass ($ref->arg-klass $ref)]
+                                    [(-> (.invoke ^java.lang.reflect.Method (class-method klass "builder") nil nil)
+                                         (build-on klass props)
+                                         .build)]))
 
                                 (sequential? v)
                                 v
@@ -162,14 +191,29 @@
 
                                 :else
                                 [v])
-                       setter (class-method (class instance)
-                                            (name k)
-                                            (if $ref
-                                              [($ref->arg-klass $ref)]
-                                              (->> [(get-in properties [(name k) "type"])]
-                                                   (mapv {"object" java.util.Map
-                                                          "string" String
-                                                          "boolean" Boolean}))))]
+                       setter (find-klass-method
+                               (class instance)
+                               (cond
+                                 pulumi?
+                                 (class v)
+
+                                 (str/starts-with? (.getName (class (first values))) "com.pulumi")
+                                 (class (first values))
+
+                                 $ref
+                                 ($ref->arg-klass $ref)
+
+                                 :else
+                                 (-> (get-in properties [(name k) "type"])
+                                     {"object" java.util.Map
+                                      "string" String
+                                      "boolean" Boolean}))
+                               (name k))]
+                   (when-not setter
+                     (throw (ex-info "No klass method found!"
+                                     {:values values
+                                      :k k
+                                      :v v})))
                    (.invoke setter instance (into-array Object values))))
                instance
                props)))
@@ -181,26 +225,31 @@
 
 (defn- build-resource
   [^String id klass props]
-  (let [args-klass (Class/forName (str (.getName klass) "Args"))
-        builder (.invoke ^java.lang.reflect.Method (class-method args-klass "builder") nil nil)
-        args (.build (build-on builder klass props))]
-    (construct klass (str (symbol id)) args)))
+  (println :BUILDING_RESOURCE id)
+  (try
+    (let [args-klass (Class/forName (str (.getName klass) "Args"))
+          builder (.invoke ^java.lang.reflect.Method (class-method args-klass "builder") nil nil)
+          args (.build (build-on builder klass props))]
+      (construct klass (str (symbol id)) args))
+    (finally
+      (println :FINISHED_BUILDING_RESOURCE id))))
 
 (defn build-infra
   [resources]
   (->> resources
        (mapv (fn [[k attrs]]
-               (let [adapted-props (mapv adapt-prop (dissoc attrs ::id))
+               (let [adapted-props (mapv adapt-prop (dissoc attrs ::id ::adapter))
                      {:keys [klass]} (first adapted-props)]
                  [k
                   {:props (->> adapted-props
                                (mapv :m)
                                (apply merge))
                    :klass klass
-                   ::id (::id attrs k)}])))
+                   ::id (::id attrs k)
+                   ::adapter (::adapter attrs)}])))
        (mapv (fn [[k {:keys [klass props]
-                      ::keys [id]}]]
-               [k (build-resource id klass props)]))
+                      ::keys [id adapter]}]]
+               [k ((or adapter identity) (build-resource id klass props))]))
        (into {})))
 
 (defn resource-attrs
