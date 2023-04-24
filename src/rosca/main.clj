@@ -34,16 +34,77 @@
        (filter (comp #{resource-name} klass->resource-type))
        first))
 
+(defn- $ref->json-schema
+  [$ref]
+  (->> (-> @aws-schema
+           (get "types")
+           (get (str/replace $ref #"#/types/" "")))
+       (into (sorted-map))))
+
+(defn- args-klass->$ref
+  [args-klass]
+  (let [package (-> (.getPackageName args-klass)
+                    (str/replace #"com.pulumi." "")
+                    (str/split #"\."))
+        klass-simple-name (-> (.getSimpleName args-klass)
+                              (str/replace #"Args" ""))]
+    (when (= (last package) "inputs")
+      (format "#/types/%s/%s:%s"
+              (->> (drop-last package)
+                   (str/join ":"))
+              klass-simple-name
+              klass-simple-name))))
+
+(defn- $ref->arg-klass
+  [$ref]
+  (let [[package simple-names] (->> (str/split $ref #"/")
+                                    (drop 2))]
+    (-> (format "com.pulumi.%s.inputs.%s"
+                (str/replace package #":" ".")
+                (-> (str/split simple-names #":")
+                    last
+                    (str "Args")))
+        Class/forName)))
+
 (defn- klass->input-properties
   [klass]
-  (->> (-> @aws-schema
-           (get "resources")
-           (get (klass->resource-type klass))
-           (get "inputProperties"))
-       (into (sorted-map))))
+  (let [res (->> (-> @aws-schema
+                     (get "resources")
+                     (get (klass->resource-type klass))
+                     (get "inputProperties"))
+                 (into (sorted-map)))]
+    (if (seq res)
+      res
+      ;; It may be an input.
+      (some-> (args-klass->$ref klass)
+              $ref->json-schema
+              (get "properties")))))
 
 (comment
 
+  ($ref->json-schema
+   "#/types/aws:apigatewayv2/AuthorizerJwtConfiguration:AuthorizerJwtConfiguration")
+
+  (->> (-> @aws-schema
+           (get "types")
+           keys)
+       (filter #(str/includes? % "DomainNameState"))
+       sort
+       (take 100))
+
+  ($ref->json-schema
+   (-> (klass->input-properties com.pulumi.aws.s3.Bucket)
+       (get "versioning")
+       (get "$ref")))
+
+  (bean com.pulumi.aws.s3.BucketArgs$Builder)
+  (bean com.pulumi.aws.s3.inputs.BucketVersioningArgs)
+
+  ())
+
+(comment
+
+  ;; Reflections for interning namespaced keywords for autocompletion.
   (do
     (import '(org.reflections Reflections))
     (import '(org.reflections.scanners SubTypesScanner))
@@ -62,10 +123,35 @@
 
   ())
 
+(defn- adapt-prop
+  ([[k v]]
+   (adapt-prop [k v] {}))
+  ([[k v] {:keys [input]}]
+   (let [[k-ns k-name] ((juxt namespace name) k)
+         [klass-simple-name attr] (str/split k-name #"_")]
+     {:klass (if input
+               (-> (str/replace k-ns #"rosca." "com.pulumi.")
+                   (str ".inputs." klass-simple-name "Args")
+                   Class/forName)
+               (-> (str/replace k-ns #"rosca." "com.pulumi.")
+                   (str "." klass-simple-name)
+                   Class/forName))
+      :m {attr v}})))
+
 (defn- build-on [instance ^Class klass props]
   (let [properties (klass->input-properties klass)]
     (reduce-kv (fn [_builder k v]
-                 (let [values (cond
+                 (let [$ref (get-in properties [(name k) "$ref"])
+                       values (cond
+                                $ref
+                                (let [props (->> (mapv #(adapt-prop % {:input true}) v)
+                                                 (mapv :m)
+                                                 (apply merge))
+                                      klass ($ref->arg-klass $ref)]
+                                  [(-> (.invoke ^java.lang.reflect.Method (class-method klass "builder") nil nil)
+                                       (build-on klass props)
+                                       .build)])
+
                                 (sequential? v)
                                 v
 
@@ -78,9 +164,12 @@
                                 [v])
                        setter (class-method (class instance)
                                             (name k)
-                                            (mapv {"object" java.util.Map
-                                                   "string" String}
-                                                  [(get-in properties [(name k) "type"])]))]
+                                            (if $ref
+                                              [($ref->arg-klass $ref)]
+                                              (->> [(get-in properties [(name k) "type"])]
+                                                   (mapv {"object" java.util.Map
+                                                          "string" String
+                                                          "boolean" Boolean}))))]
                    (.invoke setter instance (into-array Object values))))
                instance
                props)))
@@ -97,30 +186,21 @@
         args (.build (build-on builder klass props))]
     (construct klass (str (symbol id)) args)))
 
-(defn- adapt-prop
-  [[k v]]
-  (let [[k-ns k-name] ((juxt namespace name) k)
-        [klass-simple-name attr] (str/split k-name #"_")]
-    {:klass (-> (str/replace k-ns #"rosca." "com.pulumi.")
-                (str "." klass-simple-name)
-                Class/forName)
-     :m {attr v}}))
-
 (defn build-infra
   [resources]
   (->> resources
-       (mapv (fn [[k props]]
-               (let [adapted-props (mapv adapt-prop (dissoc props ::id))
+       (mapv (fn [[k attrs]]
+               (let [adapted-props (mapv adapt-prop (dissoc attrs ::id))
                      {:keys [klass]} (first adapted-props)]
                  [k
-                  {:attrs (->> adapted-props
+                  {:props (->> adapted-props
                                (mapv :m)
                                (apply merge))
                    :klass klass
-                   ::id (::id props k)}])))
-       (mapv (fn [[k {:keys [klass attrs]
+                   ::id (::id attrs k)}])))
+       (mapv (fn [[k {:keys [klass props]
                       ::keys [id]}]]
-               [k (build-resource id klass attrs)]))
+               [k (build-resource id klass props)]))
        (into {})))
 
 (defn resource-attrs
@@ -166,10 +246,14 @@
 
 (comment
 
-  (def bucket (:bucket
-               (build-infra {:bucket
-                             {:rosca.aws.s3/Bucket_acl "private"
-                              :rosca.aws.s3/Bucket_tags {"Eita" "danado"}}})))
+  (def bucket
+    (-> {:bucket
+         {:rosca.aws.s3/Bucket_acl "private"
+          :rosca.aws.s3/Bucket_tags {"Eita" "danado"}
+          :rosca.aws.s3/Bucket_versioning
+          {:rosca.aws.s3/BucketVersioning_enabled true}}}
+        build-infra
+        :bucket))
 
   @(resource-attrs bucket)
 

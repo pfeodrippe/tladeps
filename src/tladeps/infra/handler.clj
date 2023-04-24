@@ -16,7 +16,7 @@
     ::s3/Bucket_acl "private"
     ::s3/Bucket_tags {:Eita "danado"
                       "Ss" "asda"}
-    #_ #_::s3/Bucket.website "sss"}})
+    ::s3/Bucket_versioning {::s3/BucketVersioning_enabled true}}})
 
 (defn infra-handler
   [ctx]
