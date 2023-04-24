@@ -1,17 +1,17 @@
 ## Pulumi
 
-- [ ] Could we create resources using namespaced keywords?
+- [x] Could we create resources using namespaced keywords?
   - [x] Make it work for bucket
   - [x] Get all attr values for a resource
   - [x] Autocompletion
-  - [ ] Make it work for Bucket.versioning
+  - [x] Make it work for Bucket.versioning
   - [x] It could be one map that's parsed
     - Like integrant
     - https://github.com/weavejester/integrant#composite-keys
   - [x] Each key has a defined type which it's derived from docs
   - https://github.com/pulumi/pulumi-java/blob/main/tests/examples/testing-unit-java/src/main/java/com/pulumi/example/unittest/WebserverInfra.java
 - [ ] Add lambda
-  - [ ] Get more info from the jar
+  - [ ] Get more info from clojars
   - [ ] `tladeps.edn` file from resources
   - [ ] https://repo.clojars.org/io/github/pfeodrippe/tladeps-edn-module/0.4.0/tladeps-edn-module-0.4.0.pom
   - [ ] Scrap new POMs or continue filtering by `tladeps`?
@@ -24,6 +24,10 @@
 - [ ] Serialize cljs code?
 - [ ] Navigate with Portal through resource attributes
 - [ ] Make repo to store providers
+- [ ] Show required methods
+- [ ] Make autocompletion for inputs work
+- [ ] clj-kondo linting for static values
+- [ ] Check schema as early as possible
 
 ## Other
 - [ ] Typescript types in CLJ
