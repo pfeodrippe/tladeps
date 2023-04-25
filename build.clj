@@ -12,8 +12,10 @@
   (b/delete {:path "target"}))
 
 (defn copy-dir [_]
-  (b/copy-dir {:src-dirs ["src" "resources"]
-               :target-dir class-dir}))
+  (b/copy-dir {:src-dirs ["src"]
+               :target-dir class-dir})
+  (b/copy-dir {:src-dirs ["resources"]
+               :target-dir "target/resources"}))
 
 (defn copy [_]
   (clean nil)

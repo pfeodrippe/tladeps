@@ -5,7 +5,7 @@ public/js
 /checkouts
 /src/gen
 
-pom.xml
+# pom.xml
 pom.xml.asc
 *.iml
 *.jar
