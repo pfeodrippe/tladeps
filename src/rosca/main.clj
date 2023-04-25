@@ -43,19 +43,6 @@
            (get (str/replace $ref #"#/types/" "")))
        (into (sorted-map))))
 
-(comment
-
-  ($ref->json-schema
-   (-> (klass->input-properties com.pulumi.aws.lambda.Function)
-       (get "role")
-       ))
-
-  (-> @aws-schema
-      (get "types")
-      count)
-
-  ())
-
 (defn- args-klass->$ref
   [args-klass]
   (let [package (-> (.getPackageName args-klass)
@@ -269,6 +256,12 @@
                           (dissoc ::handler ::deps))})
                   (get k)))))
 
+(defn apply-value
+  [obj f]
+  (.applyValue obj (reify java.util.function.Function
+                     (apply [_ v]
+                       (f v)))))
+
 (defn resource-attrs
   "It fetches the resources attributes available from Pulumi, it returns a promise.
 
@@ -299,14 +292,13 @@
               (mapv #(let [attr (prop->attr klass %)]
                        (try
                          (some-> (.invoke (class-method klass %) resource nil)
-                                 (.applyValue (reify java.util.function.Function
-                                                (apply [_ v]
-                                                  (swap! *keeper assoc
-                                                         attr
-                                                         (if (instance? java.util.Optional v)
-                                                           (when (.isPresent v)
-                                                             (.get v))
-                                                           v))))))
+                                 (apply-value (fn [v]
+                                                (swap! *keeper assoc
+                                                       attr
+                                                       (if (instance? java.util.Optional v)
+                                                         (when (.isPresent v)
+                                                           (.get v))
+                                                         v)))))
                          (catch Exception _)))))
          prom)))))
 

@@ -22,6 +22,8 @@
          (accept [_ ctx]
            (handler ctx))))))
 
+;; Check https://github.com/pulumi/examples/blob/master/aws-py-apigateway-lambda-serverless/__main__.py for
+;; the example.
 (defn infra-map
   []
   {::tladeps-bucket
@@ -36,7 +38,6 @@
     ::lambda/Function_handler "hello.handler"
     ::lambda/Function_code (com.pulumi.asset.AssetArchive. {"." (com.pulumi.asset.FileArchive. "./hello_lambda")})
     ::lambda/Function_role {::ro/id :lambda-role
-                            ;; TODO: This adapter should be attached to the value, not to the resource.
                             ::ro/adapter #(.arn %)
                             ;; TODO: How to slurp this resource with the maven plugin?
                             ::iam/Role_assumeRolePolicy (str "{\n  \"Version\": \"2012-10-17\",\n  \"Statement\": [\n    {\n      \"Action\": \"sts:AssumeRole\",\n      \"Principal\": {\n        \"Service\": \"lambda.amazonaws.com\"\n      },\n      \"Effect\": \"Allow\",\n      \"Sid\": \"\"\n    }\n  ]\n}\n")
@@ -47,9 +48,24 @@
 
    ::lambda-backend
    {::api/Integration_integrationType "AWS_PROXY"
-    ::ro/deps {::http-endpoint (ro/ref ::http-endpoint)}
-    ::ro/handler (fn [{::keys [http-endpoint]}]
-                   {::api/Integration_apiId (.id http-endpoint)})}})
+    ::api/Integration_integrationMethod "ANY"
+    ::ro/deps {::http-endpoint (ro/ref ::http-endpoint)
+               ::proxy (ro/ref ::proxy)}
+    ::ro/handler (fn [{::keys [http-endpoint proxy]}]
+                   {::api/Integration_apiId (.id http-endpoint)
+                    ::api/Integration_integrationUri (.arn proxy)})}
+
+   ::http-route
+   {::api/Route_routeKey "ANY /{proxy+}"
+    ::ro/deps {::http-endpoint (ro/ref ::http-endpoint)
+               ::lambda-backend (ro/ref ::lambda-backend)}
+    ::ro/handler (fn [{::keys [http-endpoint lambda-backend]}]
+                   {::api/Route_apiId (.id http-endpoint)
+                    ::api/Route_target (-> lambda-backend .id
+                                           (ro/apply-value #(str "integrations/" %)))})}})
+
+;; TODO Simplify simple attr ref
+;; TODO Make deps a set
 
 (comment
 
