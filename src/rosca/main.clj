@@ -1,7 +1,9 @@
 (ns rosca.main
+  (:refer-clojure :exclude [ref])
   (:require
    [clojure.data.json :as json]
-   [clojure.string :as str])
+   [clojure.string :as str]
+   [integrant.core :as ig])
   (:import
    (com.pulumi.core.annotations ResourceType)
    (com.pulumi.test PulumiTest)))
@@ -157,7 +159,7 @@
                       seq)))
        first))
 
-(declare build-infra)
+(declare build-infra*)
 
 (defn- build-on [instance ^Class klass props]
   (let [properties (klass->input-properties klass)]
@@ -171,7 +173,7 @@
                                 $ref
                                 (if (::id v)
                                   ;; It's a standalone resource.
-                                  [(:_bogus (build-infra {:_bogus v}))]
+                                  [(:_bogus (build-infra* {:_bogus v}))]
                                   ;; Otherwise it's an Args.
                                   (let [props (->> (mapv #(adapt-prop % {:input true}) v)
                                                    (mapv :m)
@@ -234,7 +236,7 @@
     (finally
       (println :FINISHED_BUILDING_RESOURCE id))))
 
-(defn build-infra
+(defn- build-infra*
   [resources]
   (->> resources
        (mapv (fn [[k attrs]]
@@ -245,12 +247,27 @@
                                (mapv :m)
                                (apply merge))
                    :klass klass
-                   ::id (::id attrs k)
+                   ::id (-> (::id attrs k)
+                            symbol
+                            str
+                            (str/replace "/" "___")
+                            (str/replace "." "__"))
                    ::adapter (::adapter attrs)}])))
        (mapv (fn [[k {:keys [klass props]
                       ::keys [id adapter]}]]
                [k ((or adapter identity) (build-resource id klass props))]))
        (into {})))
+
+(defn build-infra
+  [config]
+  (ig/build config (keys config)
+            (fn [k {::keys [handler] :as v
+                    :or {handler identity}}]
+              (-> (build-infra*
+                   {k (-> v
+                          (merge (handler (merge v (::deps v))))
+                          (dissoc ::handler ::deps))})
+                  (get k)))))
 
 (defn resource-attrs
   "It fetches the resources attributes available from Pulumi, it returns a promise.
@@ -293,6 +310,8 @@
                          (catch Exception _)))))
          prom)))))
 
+(def ref ig/ref)
+
 (comment
 
   (def bucket
@@ -301,7 +320,7 @@
           :rosca.aws.s3/Bucket_tags {"Eita" "danado"}
           :rosca.aws.s3/Bucket_versioning
           {:rosca.aws.s3/BucketVersioning_enabled true}}}
-        build-infra
+        build-infra*
         :bucket))
 
   @(resource-attrs bucket)

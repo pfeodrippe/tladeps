@@ -4,6 +4,7 @@
    [rosca.aws.s3 :as-alias s3]
    [rosca.aws.lambda :as-alias lambda]
    [rosca.aws.iam :as-alias iam]
+   [rosca.aws.apigatewayv2 :as-alias api]
    [rosca.main :as ro])
   (:import
    (com.pulumi.core Output)
@@ -11,44 +12,6 @@
    (com.pulumi.core.annotations ResourceType)
    (com.pulumi.test Mocks Mocks$ResourceResult PulumiTest)
    (java.util.function Consumer)))
-
-(defn infra-map
-  []
-  {:tladeps-bucket
-   {::ro/id :tladeps-dbucket
-    ::s3/Bucket_acl "private"
-    ::s3/Bucket_tags {:Eita "danado"
-                      "Ss" "asda"}
-    ::s3/Bucket_versioning {::s3/BucketVersioning_enabled true}}
-
-   :proxy
-   {::lambda/Function_runtime "python3.7"
-    ::lambda/Function_handler "hello.handler"
-    ::lambda/Function_code (com.pulumi.asset.AssetArchive. {"." (com.pulumi.asset.FileArchive. "./hello_lambda")})
-    ::lambda/Function_role {::ro/id :lambda-role
-                            ;; TODO: This adapter should be attached to the value, not to the resource.
-                            ::ro/adapter #(.arn %)
-                            ;; TODO: How to slurp this resource with the maven plugin?
-                            ::iam/Role_assumeRolePolicy "{\n  \"Version\": \"2012-10-17\",\n  \"Statement\": [\n    {\n      \"Action\": \"sts:AssumeRole\",\n      \"Principal\": {\n        \"Service\": \"lambda.amazonaws.com\"\n      },\n      \"Effect\": \"Allow\",\n      \"Sid\": \"\"\n    }\n  ]\n}\n"
-                            #_(slurp (io/resource "tladeps/infra/lambda_role_policy.json"))}}})
-
-(defn infra-handler
-  [ctx]
-  #_(.. ctx log (info (str ctx)))
-  (let [{:keys [tladeps-bucket]} (ro/build-infra (infra-map))]
-    #_(ro/resource-attrs tladeps-bucket
-                         (fn [v]
-                           (spit "fff.edn"
-                                 (with-out-str
-                                   (clojure.pprint/pprint v)))))
-    (.. ctx (export "bucket-name"
-                    (.bucket tladeps-bucket)))))
-
-(defn make-consumer
-  []
-  (reify Consumer
-    (accept [_ ctx]
-      (infra-handler ctx))))
 
 (defn run-test
   [mocks handler]
@@ -59,7 +22,38 @@
          (accept [_ ctx]
            (handler ctx))))))
 
+(defn infra-map
+  []
+  {::tladeps-bucket
+   {::ro/id :tladeps-dbucket
+    ::s3/Bucket_acl "private"
+    ::s3/Bucket_tags {:Eita "danado"
+                      "Ss" "asda"}
+    ::s3/Bucket_versioning {::s3/BucketVersioning_enabled true}}
+
+   ::proxy
+   {::lambda/Function_runtime "python3.7"
+    ::lambda/Function_handler "hello.handler"
+    ::lambda/Function_code (com.pulumi.asset.AssetArchive. {"." (com.pulumi.asset.FileArchive. "./hello_lambda")})
+    ::lambda/Function_role {::ro/id :lambda-role
+                            ;; TODO: This adapter should be attached to the value, not to the resource.
+                            ::ro/adapter #(.arn %)
+                            ;; TODO: How to slurp this resource with the maven plugin?
+                            ::iam/Role_assumeRolePolicy (str "{\n  \"Version\": \"2012-10-17\",\n  \"Statement\": [\n    {\n      \"Action\": \"sts:AssumeRole\",\n      \"Principal\": {\n        \"Service\": \"lambda.amazonaws.com\"\n      },\n      \"Effect\": \"Allow\",\n      \"Sid\": \"\"\n    }\n  ]\n}\n")
+                            #_(slurp (io/resource "/tladeps/infra/lambda_role_policy.json"))}}
+
+   ::http-endpoint
+   {::api/Api_protocolType "HTTP"}
+
+   ::lambda-backend
+   {::api/Integration_integrationType "AWS_PROXY"
+    ::ro/deps {::http-endpoint (ro/ref ::http-endpoint)}
+    ::ro/handler (fn [{::keys [http-endpoint]}]
+                   {::api/Integration_apiId (.id http-endpoint)})}})
+
 (comment
+
+  (declare infra-handler)
 
   (def my-mocks
     (reify Mocks
@@ -74,3 +68,14 @@
        (mapv (comp deref ro/resource-attrs)))
 
   ())
+
+(defn infra-handler
+  [ctx]
+  (let [{::keys [tladeps-bucket]} (ro/build-infra (infra-map))]
+    (.. ctx (export "bucket-name" (.bucket tladeps-bucket)))))
+
+(defn make-consumer
+  []
+  (reify Consumer
+    (accept [_ ctx]
+      (infra-handler ctx))))
