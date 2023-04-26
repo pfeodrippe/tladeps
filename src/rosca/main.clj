@@ -362,6 +362,7 @@
        (into {})))
 
 (defn build-infra
+  "Builds the system."
   [config]
   (ig/build config (keys config)
             (fn [k {::keys [handler] :as v
@@ -384,11 +385,11 @@
   It will wait until _all_ the props are available, see
   https://www.pulumi.com/docs/intro/concepts/inputs-outputs.
 
-  If used, `resource-handler` is a function which receives the promise value when all attrs
+  If used, `resource-callback` is a function which receives the promise value when all attrs
   are available."
   ([resource]
    (resource-attrs resource identity))
-  ([resource resource-handler]
+  ([resource resource-callback]
    (let [klass (class resource)
          props (keys (klass->input-properties klass))
          prom (promise)]
@@ -396,14 +397,15 @@
        (deliver prom {::id (.getResourceName resource)})
        (let [*keeper (atom {})]
          ;; I've tried to use `Output/all`, but Pulumi was complaining about it.
-         (add-watch *keeper ::keeper (fn [_key _reference _old-v new-v]
-                                       (when (= (count new-v) (count props))
-                                         ;; It means that all the props were collected.
-                                         (deliver prom (merge (->> new-v
-                                                                   (remove (comp nil? val))
-                                                                   (into (sorted-map)))
-                                                              {::id (.getResourceName resource)}))
-                                         (resource-handler @prom))))
+         (add-watch *keeper [::keeper (gensym)]
+                    (fn [_key _reference _old-v new-v]
+                      (when (= (count new-v) (count props))
+                        ;; It means that all the props were collected.
+                        (deliver prom (merge (->> new-v
+                                                  (remove (comp nil? val))
+                                                  (into (sorted-map)))
+                                             {::id (.getResourceName resource)}))
+                        (resource-callback @prom))))
          (->> props
               (mapv #(let [attr (prop->attr klass %)]
                        (try
@@ -417,6 +419,17 @@
                                                          v)))))
                          (catch Exception _)))))
          prom)))))
+
+(defn system-attrs
+  "Retrieve system attrs (system is the return of `build-infra`), see `resource-attrs`.
+
+  It returns a future, but you can use `system-callback` to act on the value
+  of this future."
+  ([system]
+   (system-attrs system identity))
+  ([system system-callback]
+   (future
+     (system-callback (update-vals system (comp deref resource-attrs))))))
 
 (def ref ig/ref)
 
