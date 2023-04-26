@@ -1,5 +1,6 @@
 (ns tladeps.infra.handler
   (:require
+   [clojure.pprint :as pp]
    [clojure.java.io :as io]
    [rosca.aws.s3 :as-alias s3]
    [rosca.aws.lambda :as-alias lambda]
@@ -71,9 +72,19 @@
     ::ro/handler (fn [{::keys [http-endpoint http-route]}]
                    {::api/Stage_apiId (.id http-endpoint)
                     ::api/Stage_routeSettings
-                    [{::api/StageRouteSetting_routeKey (.routeKey http-route)}]})}})
+                    [{::api/StageRouteSetting_routeKey (.routeKey http-route)}]})}
 
-;; TODO Input autocompletion
+   ::http-invoke-permission
+   {::lambda/Permission_action "lambda:invokeFunction"
+    ::lambda/Permission_principal "apigateway.amazonaws.com"
+    ::ro/deps {::proxy (ro/ref ::proxy)
+               ::http-endpoint (ro/ref ::http-endpoint)}
+    ::ro/handler (fn [{::keys [proxy http-endpoint]}]
+                   {::lambda/Permission_function (.name proxy)
+                    ::lambda/Permission_sourceArn (->  http-endpoint .executionArn
+                                                       (ro/apply-value #(str % "*/*")))})}})
+
+;; DONE Input autocompletion
 ;; TODO Simplify simple attr ref
 ;; TODO Make deps a set
 ;; TODO We could have a macro to help to figure out th dependencies that can replace
@@ -100,7 +111,9 @@
 
 (defn infra-handler
   [ctx]
-  (let [{::keys [tladeps-bucket]} (ro/build-infra (infra-map))]
+  (let [{::keys [tladeps-bucket] :as system} (ro/build-infra (infra-map))]
+    (ro/system-attrs system (fn [v]
+                              (spit "result.edn" (with-out-str (pp/pprint v)))))
     (.. ctx (export "bucket-name" (.bucket tladeps-bucket)))))
 
 (defn make-consumer
