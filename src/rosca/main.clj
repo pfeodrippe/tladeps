@@ -226,6 +226,9 @@
 
 (defn- find-klass-method
   [klass type prop]
+  #_(do (def klass klass)
+        (def type' type)
+        (def prop prop))
   (->> (bean klass)
        :declaredMethods
        (filter (comp #{prop} #(.getName %)))
@@ -251,25 +254,25 @@
                                 (def $ref $ref)
                                 (def items-$ref items-$ref)
                                 (def properties properties))
-                       values (cond
-                                pulumi?
-                                [v]
+                       values [(cond
+                                 pulumi?
+                                 v
 
-                                $ref
-                                (if (::id v)
-                                  ;; It's a standalone resource.
-                                  [(:_bogus (build-infra* {:_bogus v}))]
-                                  ;; Otherwise it's an Args.
-                                  (let [props (->> (mapv #(adapt-prop % {:input true}) v)
-                                                   (mapv :m)
-                                                   (apply merge))
-                                        klass ($ref->arg-klass $ref)]
-                                    [(-> (.invoke ^java.lang.reflect.Method (class-method klass "builder") nil nil)
+                                 $ref
+                                 (if (::id v)
+                                   ;; It's a standalone resource.
+                                   (:_bogus (build-infra* {:_bogus v}))
+                                   ;; Otherwise it's an Args.
+                                   (let [props (->> (mapv #(adapt-prop % {:input true}) v)
+                                                    (mapv :m)
+                                                    (apply merge))
+                                         klass ($ref->arg-klass $ref)]
+                                     (-> (.invoke ^java.lang.reflect.Method (class-method klass "builder") nil nil)
                                          (build-on klass props)
-                                         .build)]))
+                                         .build)))
 
-                                items-$ref
-                                [(->> v
+                                 items-$ref
+                                 (->> v
                                       (mapv (fn [item]
                                               (let [props (->> (mapv #(adapt-prop % {:input true}) item)
                                                                (mapv :m)
@@ -277,18 +280,21 @@
                                                     klass ($ref->arg-klass items-$ref)]
                                                 (-> (.invoke ^java.lang.reflect.Method (class-method klass "builder") nil nil)
                                                     (build-on klass props)
-                                                    .build)))))]
+                                                    .build)))))
 
-                                (sequential? v)
-                                [v]
+                                 (sequential? v)
+                                 v
 
-                                (map? v)
-                                [(java.util.Map/ofEntries
+                                 (int? v)
+                                 (int v)
+
+                                 (map? v)
+                                 (java.util.Map/ofEntries
                                   (into-array java.util.Map$Entry
-                                              (update-keys v (comp str symbol))))]
+                                              (update-keys v (comp str symbol))))
 
-                                :else
-                                [v])
+                                 :else
+                                 v)]
                        setter (find-klass-method
                                (class instance)
                                (cond
@@ -296,6 +302,12 @@
                                  (class v)
 
                                  (sequential? v)
+                                 (class v)
+
+                                 (int? v)
+                                 (class (int v))
+
+                                 (number? v)
                                  (class v)
 
                                  (str/starts-with? (.getName (class (first values))) "com.pulumi")
@@ -399,6 +411,12 @@
          ;; I've tried to use `Output/all`, but Pulumi was complaining about it.
          (add-watch *keeper [::keeper (gensym)]
                     (fn [_key _reference _old-v new-v]
+                      #_(spit "events.edn"
+                              (str (with-out-str (pp/pprint {:count (count new-v)
+                                                             :props-count (count props)
+                                                             :v new-v}))
+                                   "\n\n\n\n")
+                              :append true)
                       (when (= (count new-v) (count props))
                         ;; It means that all the props were collected.
                         (deliver prom (merge (->> new-v

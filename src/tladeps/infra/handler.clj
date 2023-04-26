@@ -41,7 +41,7 @@
     ::lambda/Function_role {::ro/id :lambda-role
                             ::ro/adapter #(.arn %)
                             ;; TODO: How to slurp this resource with the maven plugin?
-                            ::iam/Role_assumeRolePolicy (str "{\n  \"Version\": \"2012-10-17\",\n  \"Statement\": [\n    {\n      \"Action\": \"sts:AssumeRole\",\n      \"Principal\": {\n        \"Service\": \"lambda.amazonaws.com\"\n      },\n      \"Effect\": \"Allow\",\n      \"Sid\": \"\"\n    }\n  ]\n}\n")
+                            ::iam/Role_assumeRolePolicy (str "{\n  \"Version\": \"2012-10-17\",\n  \"Statement\": [\n    {\n      \"Action\": \"sts:AssumeRole\",\n      \"Principal\": {\n        \"Service\": [\"lambda.amazonaws.com\", \"apigateway.amazonaws.com\"]\n      },\n      \"Effect\": \"Allow\",\n      \"Sid\": \"\"\n    }\n  ]\n}\n")
                             #_(slurp (io/resource "/tladeps/infra/lambda_role_policy.json"))}}
 
    ::http-endpoint
@@ -49,7 +49,7 @@
 
    ::lambda-backend
    {::api/Integration_integrationType "AWS_PROXY"
-    ::api/Integration_integrationMethod "ANY"
+    ::api/Integration_integrationMethod "POST"
     ::ro/deps {::http-endpoint (ro/ref ::http-endpoint)
                ::proxy (ro/ref ::proxy)}
     ::ro/handler (fn [{::keys [http-endpoint proxy]}]
@@ -72,7 +72,9 @@
     ::ro/handler (fn [{::keys [http-endpoint http-route]}]
                    {::api/Stage_apiId (.id http-endpoint)
                     ::api/Stage_routeSettings
-                    [{::api/StageRouteSetting_routeKey (.routeKey http-route)}]})}
+                    [{::api/StageRouteSetting_routeKey (.routeKey http-route)
+                      ::api/StageRouteSetting_throttlingBurstLimit 1
+                      ::api/StageRouteSetting_throttlingRateLimit 0.5}]})}
 
    ::http-invoke-permission
    {::lambda/Permission_action "lambda:invokeFunction"
@@ -82,7 +84,9 @@
     ::ro/handler (fn [{::keys [proxy http-endpoint]}]
                    {::lambda/Permission_function (.name proxy)
                     ::lambda/Permission_sourceArn (->  http-endpoint .executionArn
-                                                       (ro/apply-value #(str % "*/*")))})}})
+                                                       (ro/apply-value #(str % "/*/*")))})}})
+
+#_(bean com.pulumi.aws.apigatewayv2.inputs.StageRouteSettingArgs$Builder)
 
 ;; DONE Input autocompletion
 ;; TODO Simplify simple attr ref
