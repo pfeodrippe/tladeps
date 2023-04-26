@@ -11,7 +11,8 @@
   - [x] Each key has a defined type which it's derived from docs
   - https://github.com/pulumi/pulumi-java/blob/main/tests/examples/testing-unit-java/src/main/java/com/pulumi/example/unittest/WebserverInfra.java
 - [ ] Proxy
-  - [ ] Deploy lambda
+  - [ ] Deploy lambda in Python just to see it working
+  - [ ] Lambda in Clojure
   - [ ] Get more info from clojars
   - [ ] `tladeps.edn` file from resources
   - [ ] https://repo.clojars.org/io/github/pfeodrippe/tladeps-edn-module/0.4.0/tladeps-edn-module-0.4.0.pom

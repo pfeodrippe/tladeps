@@ -1,12 +1,44 @@
 (ns rosca.main
   (:refer-clojure :exclude [ref])
   (:require
+   [clojure.walk :as walk]
    [clojure.data.json :as json]
    [clojure.string :as str]
-   [integrant.core :as ig])
+   [integrant.core :as ig]
+   [clojure.pprint :as pp])
   (:import
    (com.pulumi.core.annotations ResourceType)
    (com.pulumi.test PulumiTest)))
+
+(defn pprint
+  "A simple wrapper around `clojure.pprint/write`.
+
+  Its signature is compatible with the expectations of nREPL's wrap-print
+  middleware."
+  [value writer options]
+  (let [adapt (fn [v]
+                (if (string? v)
+                  (subs v 0 (min (count v) 150))
+                  v))]
+    (apply pp/write
+           (if (coll? value)
+             (try
+               (walk/prewalk (fn [v]
+                               (if (map-entry? v)
+                                 [(key v) (adapt (val v))]
+                                 v))
+                             value)
+               (catch Exception _
+                 value))
+             (adapt value))
+           (mapcat identity (assoc options :stream writer)))))
+
+(comment
+
+  ;; For emacs.
+  (setq cider-print-fn "rosca.main/pprint")
+
+  ())
 
 (defn- class-method
   ([^Class klass ^String method-name]
@@ -59,14 +91,57 @@
 
 (defn- $ref->arg-klass
   [$ref]
-  (let [[package simple-names] (->> (str/split $ref #"/")
-                                    (drop 2))]
-    (-> (format "com.pulumi.%s.inputs.%s"
-                (str/replace package #":" ".")
-                (-> (str/split simple-names #":")
-                    last
-                    (str "Args")))
-        Class/forName)))
+  ;; It seems that there is some issue with the engine field
+  ;; https://github.com/search?q=repo%3Apulumi%2Fpulumi-aws+enginetype&type=issues.
+  ;; Other types have issues asa well, see the `contains?` just below.
+  (if (contains? #{"#/types/aws:rds/engineType:EngineType"
+                   "#/types/aws:alb/ipAddressType:IpAddressType"
+                   "#/types/aws:alb/loadBalancerType:LoadBalancerType"
+                   "#/types/aws:elasticbeanstalk/applicationVersion:ApplicationVersion"
+                   ;; This one is special in that the type is a Output, but we
+                   ;; won't want autocompletion for this.
+                   "#/types/aws:index/aRN:ARN"}
+                 $ref)
+    nil
+    (or ({"pulumi.json#/Archive" com.pulumi.asset.Archive
+          "pulumi.json#/Asset" com.pulumi.asset.Asset}
+         $ref)
+        (let [[package simple-names] (->> (str/split $ref #"/")
+                                          (drop 2))]
+          (-> (format "com.pulumi.%s.inputs.%s"
+                      (str/replace package #":" ".")
+                      (-> (str/split simple-names #":")
+                          last
+                          (str "Args")))
+              Class/forName)))))
+
+(defn- args-klass->attrs
+  [args-klass]
+  (let [package (-> (.getPackageName args-klass)
+                    (str/replace #"com.pulumi." "")
+                    (str/split #"\."))
+        klass-simple-name (-> (.getSimpleName args-klass)
+                              (str/replace #"Args" ""))
+        prop-names (-> (args-klass->$ref args-klass)
+                       ($ref->json-schema)
+                       (get "properties")
+                       keys)]
+    (when (= (last package) "inputs")
+      (->> prop-names
+           (mapv (fn [n]
+                   (-> (format "rosca.%s/%s_%s"
+                               #_"#/types/%s/%s:%s"
+                               (->> (drop-last package)
+                                    (str/join "."))
+                               klass-simple-name
+                               n)
+                       keyword)))))))
+
+(comment
+
+  (args-klass->attrs com.pulumi.aws.s3.inputs.BucketVersioningArgs)
+
+  ())
 
 (defn- klass->input-properties
   [klass]
@@ -84,20 +159,6 @@
 
 (comment
 
-  ($ref->json-schema
-   "#/types/aws:apigatewayv2/AuthorizerJwtConfiguration:AuthorizerJwtConfiguration")
-
-  (->> (-> @aws-schema
-           (get "types")
-           keys)
-       (filter #(str/includes? % "DomainNameState"))
-       sort
-       (take 100))
-
-  ())
-
-(comment
-
   ;; Reflections for interning namespaced keywords for autocompletion.
   (do
     (import '(org.reflections Reflections))
@@ -106,15 +167,44 @@
     (defonce reflections
       (Reflections. "com.pulumi" (into-array org.reflections.scanners.Scanner [])))
 
-    (->> (-> @aws-schema (get "resources"))
-         #_(take 3)
-         (mapv (fn [[resource-name _props]]
-                 (let [klass (resource-name->klass reflections resource-name)
-                       input-props (keys (klass->input-properties klass))]
-                   [klass (->> input-props
-                               (mapv (partial prop->attr klass)))])))
-         (into (sorted-map-by (fn [k1 k2]
-                                (compare (.getName k1) (.getName k2))))))
+    (do (def xx (atom []))
+        (->> (-> @aws-schema (get "resources"))
+             #_(->> (-> @aws-schema
+                        (get "resources"))
+                    (filter (comp #{"aws:apigatewayv2/stage:Stage"} key)))
+             #_(take 3)
+             (pmap (fn [[resource-name _props]]
+                     (let [klass (resource-name->klass reflections resource-name)
+                           input-props (klass->input-properties klass)]
+                       [klass (->> input-props
+                                   (mapv (fn [[n prop]]
+                                           #_(do (def klass klass)
+                                                 (def n n)
+                                                 (def prop prop))
+                                           [(prop->attr klass n)
+                                            {:ref-attrs (try
+                                                          (some-> (get prop "$ref")
+                                                                  $ref->arg-klass
+                                                                  args-klass->attrs)
+                                                          (catch Exception _
+                                                            (swap! xx conj {:klass klass
+                                                                            :$ref (get prop "$ref")
+                                                                            :n n
+                                                                            :prop prop})))
+                                             :array (try
+                                                      (some-> (get-in prop ["items" "$ref"])
+                                                              $ref->arg-klass
+                                                              args-klass->attrs)
+                                                      (catch Exception _
+                                                        (swap! xx conj {:klass klass
+                                                                        :items (get-in prop ["items"])
+                                                                        :n n
+                                                                        :prop prop})))}]))
+                                   (into (sorted-map)))])))
+             (into (sorted-map-by (fn [k1 k2]
+                                    (compare (.getName k1) (.getName k2)))))
+             keys))
+
     nil)
 
   ())

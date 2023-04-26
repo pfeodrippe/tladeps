@@ -62,10 +62,22 @@
     ::ro/handler (fn [{::keys [http-endpoint lambda-backend]}]
                    {::api/Route_apiId (.id http-endpoint)
                     ::api/Route_target (-> lambda-backend .id
-                                           (ro/apply-value #(str "integrations/" %)))})}})
+                                           (ro/apply-value #(str "integrations/" %)))})}
 
+   ::http-stage
+   {::api/Stage_autoDeploy true
+    ::ro/deps {::http-endpoint (ro/ref ::http-endpoint)
+               ::http-route (ro/ref ::http-route)}
+    ::ro/handler (fn [{::keys [http-endpoint http-route]}]
+                   {::api/Stage_apiId (.routeKey http-route)
+                    #_ #_::api/Stage_routeSettings ::api/Stage_description})}})
+
+;; TODO Input autocompletion
 ;; TODO Simplify simple attr ref
 ;; TODO Make deps a set
+;; TODO We could have a macro to help to figure out th dependencies that can replace
+;;      ::ro/handler and ::ro/deps at the same time
+;; TODO Create abstraction so we don't need to use the `.` java operator
 
 (comment
 
