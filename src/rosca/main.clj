@@ -242,7 +242,15 @@
   (let [properties (klass->input-properties klass)]
     (reduce-kv (fn [_builder k v]
                  (let [$ref (get-in properties [(name k) "$ref"])
+                       items-$ref (get-in properties [(name k) "items" "$ref"])
                        pulumi? (str/starts-with? (.getName (class v)) "com.pulumi")
+                       #_ #__ (do
+                                (def pulumi? pulumi?)
+                                (def k k)
+                                (def v v)
+                                (def $ref $ref)
+                                (def items-$ref items-$ref)
+                                (def properties properties))
                        values (cond
                                 pulumi?
                                 [v]
@@ -260,8 +268,19 @@
                                          (build-on klass props)
                                          .build)]))
 
+                                items-$ref
+                                [(->> v
+                                      (mapv (fn [item]
+                                              (let [props (->> (mapv #(adapt-prop % {:input true}) item)
+                                                               (mapv :m)
+                                                               (apply merge))
+                                                    klass ($ref->arg-klass items-$ref)]
+                                                (-> (.invoke ^java.lang.reflect.Method (class-method klass "builder") nil nil)
+                                                    (build-on klass props)
+                                                    .build)))))]
+
                                 (sequential? v)
-                                v
+                                [v]
 
                                 (map? v)
                                 [(java.util.Map/ofEntries
@@ -276,6 +295,9 @@
                                  pulumi?
                                  (class v)
 
+                                 (sequential? v)
+                                 (class v)
+
                                  (str/starts-with? (.getName (class (first values))) "com.pulumi")
                                  (class (first values))
 
@@ -288,8 +310,12 @@
                                       "string" String
                                       "boolean" Boolean}))
                                (name k))]
+                   #_(do
+                       (def setter setter)
+                       (def instance instance)
+                       (def values values))
                    (when-not setter
-                     (throw (ex-info "No klass method found!"
+                     (throw (ex-info "No class method found!"
                                      {:values values
                                       :k k
                                       :v v})))

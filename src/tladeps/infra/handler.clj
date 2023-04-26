@@ -69,8 +69,9 @@
     ::ro/deps {::http-endpoint (ro/ref ::http-endpoint)
                ::http-route (ro/ref ::http-route)}
     ::ro/handler (fn [{::keys [http-endpoint http-route]}]
-                   {::api/Stage_apiId (.routeKey http-route)
-                    #_ #_::api/Stage_routeSettings ::api/Stage_description})}})
+                   {::api/Stage_apiId (.id http-endpoint)
+                    ::api/Stage_routeSettings
+                    [{::api/StageRouteSetting_routeKey (.routeKey http-route)}]})}})
 
 ;; TODO Input autocompletion
 ;; TODO Simplify simple attr ref
