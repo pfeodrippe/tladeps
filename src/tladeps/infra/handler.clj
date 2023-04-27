@@ -23,8 +23,8 @@
          (accept [_ ctx]
            (handler ctx))))))
 
-;; Check https://github.com/pulumi/examples/blob/master/aws-py-apigateway-lambda-serverless/__main__.py for
-;; the example.
+;; Check https://github.com/pulumi/examples/blob/master/aws-py-apigateway-lambda-serverless/__main__.py
+;; for the example.
 (defn infra-map
   []
   {::tladeps-bucket
@@ -34,15 +34,55 @@
                       "Ss" "asda"}
     ::s3/Bucket_versioning {::s3/BucketVersioning_enabled true}}
 
+   ::lambda-role-policy
+   {::iam/RolePolicy_policy "{\n  \"Version\": \"2012-10-17\",\n  \"Statement\": [{\n    \"Effect\": \"Allow\",\n    \"Action\": [\n      \"logs:CreateLogGroup\",\n      \"logs:CreateLogStream\",\n      \"logs:PutLogEvents\"\n    ],\n    \"Resource\": \"arn:aws:logs:*:*:*\"\n  }]\n}\n"
+    ::ro/deps {::lambda-role (ro/ref ::lambda-role)}
+    ::ro/handler (fn [{::keys [lambda-role]}]
+                   {::iam/RolePolicy_role (.id lambda-role)})}
+
+   ::lambda-role
+   {;; TODO: How to slurp this resource with the maven plugin?
+    ::iam/Role_assumeRolePolicy (str "{\n  \"Version\": \"2012-10-17\",\n  \"Statement\": [\n    {\n      \"Action\": \"sts:AssumeRole\",\n      \"Principal\": {\n        \"Service\": [\"lambda.amazonaws.com\", \"apigateway.amazonaws.com\"]\n      },\n      \"Effect\": \"Allow\",\n      \"Sid\": \"\"\n    }\n  ]\n}\n")
+    #_(slurp (io/resource "/tladeps/infra/lambda_role_policy.json"))}
+
    ::proxy
-   {::lambda/Function_runtime "python3.7"
-    ::lambda/Function_handler "hello.handler"
-    ::lambda/Function_code (com.pulumi.asset.AssetArchive. {"." (com.pulumi.asset.FileArchive. "./hello_lambda")})
-    ::lambda/Function_role {::ro/id :lambda-role
-                            ::ro/adapter #(.arn %)
-                            ;; TODO: How to slurp this resource with the maven plugin?
-                            ::iam/Role_assumeRolePolicy (str "{\n  \"Version\": \"2012-10-17\",\n  \"Statement\": [\n    {\n      \"Action\": \"sts:AssumeRole\",\n      \"Principal\": {\n        \"Service\": [\"lambda.amazonaws.com\", \"apigateway.amazonaws.com\"]\n      },\n      \"Effect\": \"Allow\",\n      \"Sid\": \"\"\n    }\n  ]\n}\n")
-                            #_(slurp (io/resource "/tladeps/infra/lambda_role_policy.json"))}}
+   {::lambda/Function_runtime "java11"
+    ::lambda/Function_handler "eita.MyHello"
+    ::lambda/Function_code (com.pulumi.asset.AssetArchive.
+                            {"." (com.pulumi.asset.FileArchive.
+                                  "./target/tladeps-1.0.0.jar")})
+    ::lambda/Function_timeout 30
+    ::lambda/Function_memorySize 512
+    ::ro/deps {::lambda-role (ro/ref ::lambda-role)}
+    ::ro/handler (fn [{::keys [lambda-role]}]
+                   {::lambda/Function_role (.arn lambda-role)})}
+
+   ;; Babashka
+   #_{::lambda/Function_runtime "provided.al2"
+      ::lambda/Function_handler "hello/handler"
+      ::lambda/Function_code (com.pulumi.asset.AssetArchive.
+                              {"." (com.pulumi.asset.FileArchive.
+                                    "./target/hello-blambda.zip")})
+      ::lambda/Function_architectures ["x86_64"]
+      ::lambda/Function_memorySize 512
+      ::lambda/Function_role {::ro/id :lambda-role
+                              ::ro/adapter #(.arn %)
+                              ;; TODO: How to slurp this resource with the maven plugin?
+                              ::iam/Role_assumeRolePolicy (str "{\n  \"Version\": \"2012-10-17\",\n  \"Statement\": [\n    {\n      \"Action\": \"sts:AssumeRole\",\n      \"Principal\": {\n        \"Service\": [\"lambda.amazonaws.com\", \"apigateway.amazonaws.com\"]\n      },\n      \"Effect\": \"Allow\",\n      \"Sid\": \"\"\n    }\n  ]\n}\n")
+                              #_(slurp (io/resource "/tladeps/infra/lambda_role_policy.json"))}
+      ::ro/deps {::bb-layer (ro/ref ::bb-layer)}
+      ::ro/handler (fn [{::keys [bb-layer]}]
+                     {::lambda/Function_layers [(.arn bb-layer)]})}
+
+   ;; Python
+   #_{::lambda/Function_runtime "python3.7"
+      ::lambda/Function_handler "hello.handler"
+      ::lambda/Function_code (com.pulumi.asset.AssetArchive. {"." (com.pulumi.asset.FileArchive. "./hello_lambda")})
+      ::lambda/Function_role {::ro/id :lambda-role
+                              ::ro/adapter #(.arn %)
+                              ;; TODO: How to slurp this resource with the maven plugin?
+                              ::iam/Role_assumeRolePolicy (str "{\n  \"Version\": \"2012-10-17\",\n  \"Statement\": [\n    {\n      \"Action\": \"sts:AssumeRole\",\n      \"Principal\": {\n        \"Service\": [\"lambda.amazonaws.com\", \"apigateway.amazonaws.com\"]\n      },\n      \"Effect\": \"Allow\",\n      \"Sid\": \"\"\n    }\n  ]\n}\n")
+                              #_(slurp (io/resource "/tladeps/infra/lambda_role_policy.json"))}}
 
    ::http-endpoint
    {::api/Api_protocolType "HTTP"}
@@ -84,7 +124,20 @@
     ::ro/handler (fn [{::keys [proxy http-endpoint]}]
                    {::lambda/Permission_function (.name proxy)
                     ::lambda/Permission_sourceArn (->  http-endpoint .executionArn
-                                                       (ro/apply-value #(str % "/*/*")))})}})
+                                                       (ro/apply-value #(str % "/*/*")))})}
+
+   ;; For the layer, see https://github.com/jmglov/blambda/tree/main/examples/hello-world
+   ;; and its Terraform output.
+   #_ #_
+   ::bb-layer
+   ;; TODO: We shouldn't use be the absolute path here.
+   {::lambda/LayerVersion_compatibleRuntimes ["provided.al2" "provided"]
+    ::lambda/LayerVersion_layerName "blambda"
+    #_ #_::lambda/LayerVersion_sourceCodeHash (str (hash (slurp "/Users/paulo.feodrippe/dev/tladeps/target/blambda.zip")))
+    ::lambda/LayerVersion_compatibleArchitectures ["x86_64"]
+    ::lambda/LayerVersion_code (com.pulumi.asset.AssetArchive.
+                                {"." (com.pulumi.asset.FileArchive.
+                                      "./target/blambda.zip")})}})
 
 #_(bean com.pulumi.aws.apigatewayv2.inputs.StageRouteSettingArgs$Builder)
 
