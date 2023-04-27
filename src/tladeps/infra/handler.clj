@@ -115,10 +115,15 @@
 
 (defn infra-handler
   [ctx]
-  (let [{::keys [tladeps-bucket] :as system} (ro/build-infra (infra-map))]
+  (let [{::keys [tladeps-bucket http-stage]
+         :as system}
+        (ro/build-infra (infra-map))]
+    (spit "events.edn" "")
     (ro/system-attrs system (fn [v]
                               (spit "result.edn" (with-out-str (pp/pprint v)))))
-    (.. ctx (export "bucket-name" (.bucket tladeps-bucket)))))
+    (.. ctx (export "bucket-name" (.bucket tladeps-bucket)))
+    (.. ctx (export "invoke-url" (-> (.invokeUrl http-stage)
+                                     (ro/apply-value #(str % "/")))))))
 
 (defn make-consumer
   []
