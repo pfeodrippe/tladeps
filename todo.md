@@ -33,6 +33,8 @@
 - [ ] Use Route53 instead of google domains?
   - [ ] Or manage things in google domains using Pulumi?
 - [ ] Better error handling for async test
+- [ ] Conditionally create resources
+  - https://github.com/pulumi/pulumi/issues/4834#issuecomment-644827733
 
 ## TLA+
 - [ ] Run TLA+ online
