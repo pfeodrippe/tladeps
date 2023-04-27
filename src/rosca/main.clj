@@ -157,6 +157,20 @@
               $ref->json-schema
               (get "properties")))))
 
+(defn- klass->properties
+  [klass]
+  (let [res (->> (-> @aws-schema
+                     (get "resources")
+                     (get (klass->resource-type klass))
+                     (get "properties"))
+                 (into (sorted-map)))]
+    (if (seq res)
+      res
+      ;; It may be an input.
+      (some-> (args-klass->$ref klass)
+              $ref->json-schema
+              (get "properties")))))
+
 (comment
 
   ;; Reflections for interning namespaced keywords for autocompletion.
@@ -175,8 +189,8 @@
              #_(take 3)
              (pmap (fn [[resource-name _props]]
                      (let [klass (resource-name->klass reflections resource-name)
-                           input-props (klass->input-properties klass)]
-                       [klass (->> input-props
+                           props (klass->properties klass)]
+                       [klass (->> props
                                    (mapv (fn [[n prop]]
                                            #_(do (def klass klass)
                                                  (def n n)
@@ -403,7 +417,7 @@
    (resource-attrs resource identity))
   ([resource resource-callback]
    (let [klass (class resource)
-         props (keys (klass->input-properties klass))
+         props (keys (klass->properties klass))
          prom (promise)]
      (if (empty? props)
        (deliver prom {::id (.getResourceName resource)})
