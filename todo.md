@@ -12,7 +12,7 @@
   - https://github.com/pulumi/pulumi-java/blob/main/tests/examples/testing-unit-java/src/main/java/com/pulumi/example/unittest/WebserverInfra.java
 - [ ] Proxy
   - [x] Deploy lambda in Python just to see it working
-  - [ ] Lambda in Clojure
+  - [x] Lambda in Clojure
   - [ ] Get more info from clojars
   - [ ] `tladeps.edn` file from resources
   - [ ] https://repo.clojars.org/io/github/pfeodrippe/tladeps-edn-module/0.4.0/tladeps-edn-module-0.4.0.pom
@@ -43,6 +43,9 @@
   - [ ] Try it out
     - [ ] Like we had with Guima
 - [ ] Visual Editor?
+- [ ] Enable people to create their own links to share code
+- [ ] Add button to integrate with VSCode
+  - https://github.com/leanprover/vscode-lean
 
 ## Other
 - [ ] Typescript types in CLJ

@@ -20,6 +20,21 @@
 
 (defn copy [_]
   (clean nil)
+
+  ;; Uber.
+  (b/compile-clj {:basis backend-basis
+                  :src-dirs ["backend"]
+                  #_ #_:ns-compile '[hello]
+                  :sort :topo
+                  :class-dir class-dir})
+  (b/copy-dir {:src-dirs ["backend"]
+               :target-dir class-dir})
+  (b/uber {:basis backend-basis
+           :uber-file jar-file
+           :main 'hello
+           :class-dir class-dir})
+
+  ;; Pulumi app.
   (b/compile-clj {:basis basis
                   :src-dirs ["src"]
                   :ns-compile '[tladeps.infra]
@@ -31,12 +46,4 @@
                 :src-dirs ["src"]})
   (copy-dir nil)
   #_(b/jar {:class-dir class-dir
-            :jar-file jar-file})
-
-  (b/compile-clj {:basis backend-basis
-                  :src-dirs ["backend"]
-                  :ns-compile '[hello]
-                  :class-dir class-dir})
-  (b/uber {:basis backend-basis
-           :uber-file jar-file
-           :class-dir class-dir}))
+            :jar-file jar-file}))

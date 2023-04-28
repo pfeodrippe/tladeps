@@ -41,17 +41,18 @@
                    {::iam/RolePolicy_role (.id lambda-role)})}
 
    ::lambda-role
-   {;; TODO: How to slurp this resource with the maven plugin?
+   { ;; TODO: How to slurp this resource with the maven plugin?
     ::iam/Role_assumeRolePolicy (str "{\n  \"Version\": \"2012-10-17\",\n  \"Statement\": [\n    {\n      \"Action\": \"sts:AssumeRole\",\n      \"Principal\": {\n        \"Service\": [\"lambda.amazonaws.com\", \"apigateway.amazonaws.com\"]\n      },\n      \"Effect\": \"Allow\",\n      \"Sid\": \"\"\n    }\n  ]\n}\n")
     #_(slurp (io/resource "/tladeps/infra/lambda_role_policy.json"))}
 
    ::proxy
    {::lambda/Function_runtime "java11"
-    ::lambda/Function_handler "eita.MyHello"
+    ::lambda/Function_handler "tladeps.hello"
+    ::lambda/Function_name "my-lambda"
     ::lambda/Function_code (com.pulumi.asset.AssetArchive.
                             {"." (com.pulumi.asset.FileArchive.
                                   "./target/tladeps-1.0.0.jar")})
-    ::lambda/Function_timeout 30
+    ::lambda/Function_timeout 10
     ::lambda/Function_memorySize 512
     ::ro/deps {::lambda-role (ro/ref ::lambda-role)}
     ::ro/handler (fn [{::keys [lambda-role]}]
