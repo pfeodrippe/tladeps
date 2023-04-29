@@ -6,7 +6,8 @@
   integrant/integrant {:mvn/version "0.8.0"}
   org.clojure/clojure {:mvn/version "1.12.0-alpha3"}
   org.clojure/data.json {:mvn/version "2.4.0"}
-  com.amazonaws/aws-lambda-java-core {:mvn/version "1.2.1"}}
+  com.amazonaws/aws-lambda-java-core {:mvn/version "1.2.1"}
+  io.github.crac/org-crac {:mvn/version "0.1.3"}}
 
  :aliases
  {

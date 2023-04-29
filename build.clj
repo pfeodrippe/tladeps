@@ -27,8 +27,8 @@
                   #_ #_:ns-compile '[hello]
                   :sort :topo
                   :class-dir class-dir})
-  (b/copy-dir {:src-dirs ["backend"]
-               :target-dir class-dir})
+  #_(b/copy-dir {:src-dirs ["backend"]
+                 :target-dir class-dir})
   (b/uber {:basis backend-basis
            :uber-file jar-file
            :main 'hello
