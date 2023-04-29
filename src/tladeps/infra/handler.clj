@@ -54,9 +54,17 @@
                                   "./target/tladeps-1.0.0.jar")})
     ::lambda/Function_timeout 10
     ::lambda/Function_memorySize 512
+    #_ #_::lambda/Function_snapStart {::lambda/FunctionSnapStart_applyOn "PublishedVersions"}
+    #_ #_::lambda/Function_publish true
     ::ro/deps {::lambda-role (ro/ref ::lambda-role)}
     ::ro/handler (fn [{::keys [lambda-role]}]
                    {::lambda/Function_role (.arn lambda-role)})}
+
+   #_ #_::proxy-alias
+   {::ro/deps {::proxy (ro/ref ::proxy)}
+    ::ro/handler (fn [{::keys [proxy]}]
+                   {::lambda/Alias_functionName (.arn proxy)
+                    ::lambda/Alias_functionVersion "1"})}
 
    ;; Babashka
    #_{::lambda/Function_runtime "provided.al2"
@@ -92,6 +100,7 @@
    {::api/Integration_integrationType "AWS_PROXY"
     ::api/Integration_integrationMethod "POST"
     ::ro/deps {::http-endpoint (ro/ref ::http-endpoint)
+               #_ #_::proxy-alias (ro/ref ::proxy-alias)
                ::proxy (ro/ref ::proxy)}
     ::ro/handler (fn [{::keys [http-endpoint proxy]}]
                    {::api/Integration_apiId (.id http-endpoint)
@@ -120,7 +129,8 @@
    ::http-invoke-permission
    {::lambda/Permission_action "lambda:invokeFunction"
     ::lambda/Permission_principal "apigateway.amazonaws.com"
-    ::ro/deps {::proxy (ro/ref ::proxy)
+    ::ro/deps {#_ #_::proxy-alias (ro/ref ::proxy-alias)
+               ::proxy (ro/ref ::proxy)
                ::http-endpoint (ro/ref ::http-endpoint)}
     ::ro/handler (fn [{::keys [proxy http-endpoint]}]
                    {::lambda/Permission_function (.name proxy)

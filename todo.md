@@ -35,6 +35,9 @@
 - [ ] Better error handling for async test
 - [ ] Conditionally create resources
   - https://github.com/pulumi/pulumi/issues/4834#issuecomment-644827733
+- [ ] Cold start JVM lambda
+  - I've tried, but Java 17 is not available nor it was working with Java 11
+  - https://aws.amazon.com/blogs/compute/reducing-java-cold-starts-on-aws-lambda-functions-with-snapstart/
 
 ## TLA+
 - [ ] Run TLA+ online
