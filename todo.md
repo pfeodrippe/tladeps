@@ -13,6 +13,8 @@
 - [ ] Proxy
   - [x] Deploy lambda in Python just to see it working
   - [x] Lambda in Clojure
+  - [ ] Are we able to search and discover
+    - [ ] Check the nexus maven repository index, https://repo.clojars.org/.index/
   - [ ] Get more info from clojars
   - [ ] `tladeps.edn` file from resources
   - [ ] https://repo.clojars.org/io/github/pfeodrippe/tladeps-edn-module/0.4.0/tladeps-edn-module-0.4.0.pom
@@ -49,6 +51,7 @@
 - [ ] Enable people to create their own links to share code
 - [ ] Add button to integrate with VSCode
   - https://github.com/leanprover/vscode-lean
+- Store state spaces in SQLite using a state writer
 
 ## Other
 - [ ] Typescript types in CLJ
