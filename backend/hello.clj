@@ -43,5 +43,5 @@
       (with-open [input (io/input-stream (.getBytes
                                           (json/write-str
                                            {:statusCode 200
-                                            :body (json/write-str {:hi "TRRRR"})})))]
+                                            :body (json/write-str {:hi "my EVEN"})})))]
         (io/copy input os)))))
