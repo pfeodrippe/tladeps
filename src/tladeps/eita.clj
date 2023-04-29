@@ -65,9 +65,27 @@
   ;; Search.
   (let [searcher (.acquireIndexSearcher context)
         ir (.getIndexReader searcher)]
-    (bean ir)
-    (MultiBits/getLiveDocs ir)
-    (let [doc (.document ir 0)]
-      (IndexUtils/constructArtifactInfo doc context)))
+    (try
+      (bean ir)
+      #_(MultiBits/getLiveDocs ir)
+      (let [doc (.document ir 5050)]
+        (into (sorted-map)
+              (bean (IndexUtils/constructArtifactInfo doc context))))
+      #_(.maxDoc ir)
+      (finally
+        (.releaseIndexSearcher context searcher))))
+
+  (def jar-file
+    (with-open [is (:body (http/request {:url "https://repo.clojars.org/io/github/pfeodrippe/tladeps-edn-module/0.4.0/tladeps-edn-module-0.4.0.jar"
+                                         :method :get
+                                         :as :stream}))
+                os (java.io.FileOutputStream. "eita.jar")]
+      (clojure.java.io/copy is os)
+      (java.util.jar.JarFile. (clojure.java.io/file "eita.jar"))))
+
+  (count (.entries jar-file))
+
+  (slurp (.getInputStream jar-file (.getJarEntry jar-file "Edn.tla")))
+
 
   ())
