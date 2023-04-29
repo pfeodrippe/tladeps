@@ -58,40 +58,15 @@
     #_ #_::lambda/Function_publish true
     ::ro/deps {::lambda-role (ro/ref ::lambda-role)}
     ::ro/handler (fn [{::keys [lambda-role]}]
-                   {::lambda/Function_role (.arn lambda-role)})}
+                   {::lambda/Function_role (.arn lambda-role)})
+    ;; Ignore runtime for now until we have java17 available in Pulumi.
+    ::ro/options {::ro/option_ignoreChanges [::lambda/Function_runtime]}}
 
    #_ #_::proxy-alias
    {::ro/deps {::proxy (ro/ref ::proxy)}
     ::ro/handler (fn [{::keys [proxy]}]
                    {::lambda/Alias_functionName (.arn proxy)
                     ::lambda/Alias_functionVersion "1"})}
-
-   ;; Babashka
-   #_{::lambda/Function_runtime "provided.al2"
-      ::lambda/Function_handler "hello/handler"
-      ::lambda/Function_code (com.pulumi.asset.AssetArchive.
-                              {"." (com.pulumi.asset.FileArchive.
-                                    "./target/hello-blambda.zip")})
-      ::lambda/Function_architectures ["x86_64"]
-      ::lambda/Function_memorySize 512
-      ::lambda/Function_role {::ro/id :lambda-role
-                              ::ro/adapter #(.arn %)
-                              ;; TODO: How to slurp this resource with the maven plugin?
-                              ::iam/Role_assumeRolePolicy (str "{\n  \"Version\": \"2012-10-17\",\n  \"Statement\": [\n    {\n      \"Action\": \"sts:AssumeRole\",\n      \"Principal\": {\n        \"Service\": [\"lambda.amazonaws.com\", \"apigateway.amazonaws.com\"]\n      },\n      \"Effect\": \"Allow\",\n      \"Sid\": \"\"\n    }\n  ]\n}\n")
-                              #_(slurp (io/resource "/tladeps/infra/lambda_role_policy.json"))}
-      ::ro/deps {::bb-layer (ro/ref ::bb-layer)}
-      ::ro/handler (fn [{::keys [bb-layer]}]
-                     {::lambda/Function_layers [(.arn bb-layer)]})}
-
-   ;; Python
-   #_{::lambda/Function_runtime "python3.7"
-      ::lambda/Function_handler "hello.handler"
-      ::lambda/Function_code (com.pulumi.asset.AssetArchive. {"." (com.pulumi.asset.FileArchive. "./hello_lambda")})
-      ::lambda/Function_role {::ro/id :lambda-role
-                              ::ro/adapter #(.arn %)
-                              ;; TODO: How to slurp this resource with the maven plugin?
-                              ::iam/Role_assumeRolePolicy (str "{\n  \"Version\": \"2012-10-17\",\n  \"Statement\": [\n    {\n      \"Action\": \"sts:AssumeRole\",\n      \"Principal\": {\n        \"Service\": [\"lambda.amazonaws.com\", \"apigateway.amazonaws.com\"]\n      },\n      \"Effect\": \"Allow\",\n      \"Sid\": \"\"\n    }\n  ]\n}\n")
-                              #_(slurp (io/resource "/tladeps/infra/lambda_role_policy.json"))}}
 
    ::http-endpoint
    {::api/Api_protocolType "HTTP"}
@@ -135,22 +110,7 @@
     ::ro/handler (fn [{::keys [proxy http-endpoint]}]
                    {::lambda/Permission_function (.name proxy)
                     ::lambda/Permission_sourceArn (->  http-endpoint .executionArn
-                                                       (ro/apply-value #(str % "/*/*")))})}
-
-   ;; For the layer, see https://github.com/jmglov/blambda/tree/main/examples/hello-world
-   ;; and its Terraform output.
-   #_ #_
-   ::bb-layer
-   ;; TODO: We shouldn't use be the absolute path here.
-   {::lambda/LayerVersion_compatibleRuntimes ["provided.al2" "provided"]
-    ::lambda/LayerVersion_layerName "blambda"
-    #_ #_::lambda/LayerVersion_sourceCodeHash (str (hash (slurp "/Users/paulo.feodrippe/dev/tladeps/target/blambda.zip")))
-    ::lambda/LayerVersion_compatibleArchitectures ["x86_64"]
-    ::lambda/LayerVersion_code (com.pulumi.asset.AssetArchive.
-                                {"." (com.pulumi.asset.FileArchive.
-                                      "./target/blambda.zip")})}})
-
-#_(bean com.pulumi.aws.apigatewayv2.inputs.StageRouteSettingArgs$Builder)
+                                                       (ro/apply-value #(str % "/*/*")))})}})
 
 ;; DONE Input autocompletion
 ;; TODO Simplify simple attr ref
@@ -194,3 +154,44 @@
   (reify Consumer
     (accept [_ ctx]
       (infra-handler ctx))))
+
+
+;; Babashka
+#_{::lambda/Function_runtime "provided.al2"
+   ::lambda/Function_handler "hello/handler"
+   ::lambda/Function_code (com.pulumi.asset.AssetArchive.
+                           {"." (com.pulumi.asset.FileArchive.
+                                 "./target/hello-blambda.zip")})
+   ::lambda/Function_architectures ["x86_64"]
+   ::lambda/Function_memorySize 512
+   ::lambda/Function_role {::ro/id :lambda-role
+                           ::ro/adapter #(.arn %)
+                           ;; TODO: How to slurp this resource with the maven plugin?
+                           ::iam/Role_assumeRolePolicy (str "{\n  \"Version\": \"2012-10-17\",\n  \"Statement\": [\n    {\n      \"Action\": \"sts:AssumeRole\",\n      \"Principal\": {\n        \"Service\": [\"lambda.amazonaws.com\", \"apigateway.amazonaws.com\"]\n      },\n      \"Effect\": \"Allow\",\n      \"Sid\": \"\"\n    }\n  ]\n}\n")
+                           #_(slurp (io/resource "/tladeps/infra/lambda_role_policy.json"))}
+   ::ro/deps {::bb-layer (ro/ref ::bb-layer)}
+   ::ro/handler (fn [{::keys [bb-layer]}]
+                  {::lambda/Function_layers [(.arn bb-layer)]})}
+
+;; Python
+#_{::lambda/Function_runtime "python3.7"
+   ::lambda/Function_handler "hello.handler"
+   ::lambda/Function_code (com.pulumi.asset.AssetArchive. {"." (com.pulumi.asset.FileArchive. "./hello_lambda")})
+   ::lambda/Function_role {::ro/id :lambda-role
+                           ::ro/adapter #(.arn %)
+                           ;; TODO: How to slurp this resource with the maven plugin?
+                           ::iam/Role_assumeRolePolicy (str "{\n  \"Version\": \"2012-10-17\",\n  \"Statement\": [\n    {\n      \"Action\": \"sts:AssumeRole\",\n      \"Principal\": {\n        \"Service\": [\"lambda.amazonaws.com\", \"apigateway.amazonaws.com\"]\n      },\n      \"Effect\": \"Allow\",\n      \"Sid\": \"\"\n    }\n  ]\n}\n")
+                           #_(slurp (io/resource "/tladeps/infra/lambda_role_policy.json"))}}
+
+;; For the layer, see https://github.com/jmglov/blambda/tree/main/examples/hello-world
+;; and its Terraform output.
+#_ #_
+::bb-layer
+;; TODO: We shouldn't use be the absolute path here.
+{::lambda/LayerVersion_compatibleRuntimes ["provided.al2" "provided"]
+ ::lambda/LayerVersion_layerName "blambda"
+ #_ #_::lambda/LayerVersion_sourceCodeHash (str (hash (slurp "/Users/paulo.feodrippe/dev/tladeps/target/blambda.zip")))
+ ::lambda/LayerVersion_compatibleArchitectures ["x86_64"]
+ ::lambda/LayerVersion_code (com.pulumi.asset.AssetArchive.
+                             {"." (com.pulumi.asset.FileArchive.
+                                   "./target/blambda.zip")})}

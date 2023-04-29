@@ -1,6 +1,6 @@
 {:deps
  {com.pulumi/pulumi {:mvn/version "0.9.2"}
-  com.pulumi/aws {:mvn/version "5.37.0"}
+  com.pulumi/aws {:mvn/version "5.38.0"}
   org.clojure/java.data {:mvn/version "1.0.95"}
   org.reflections/reflections {:mvn/version "0.10.2"}
   integrant/integrant {:mvn/version "0.8.0"}

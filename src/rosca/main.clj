@@ -5,10 +5,10 @@
    [clojure.data.json :as json]
    [clojure.string :as str]
    [integrant.core :as ig]
-   [clojure.pprint :as pp])
+   [clojure.pprint :as pp]
+   [clojure.java.data.builder :as builder])
   (:import
-   (com.pulumi.core.annotations ResourceType)
-   (com.pulumi.test PulumiTest)))
+   (com.pulumi.core.annotations ResourceType)))
 
 (defn pprint
   "A simple wrapper around `clojure.pprint/write`.
@@ -223,6 +223,12 @@
 
   ())
 
+(defn- k->attr
+  [k]
+  (let [[_k-ns k-name] ((juxt namespace name) k)
+        [_klass-simple-name attr] (str/split k-name #"_")]
+    attr))
+
 (defn- adapt-prop
   ([[k v]]
    (adapt-prop [k v] {}))
@@ -255,7 +261,8 @@
 
 (declare build-infra*)
 
-(defn- build-on [instance ^Class klass props]
+(defn- build-on
+  [instance ^Class klass props]
   (let [properties (klass->input-properties klass)]
     (reduce-kv (fn [_builder k v]
                  (let [$ref (get-in properties [(name k) "$ref"])
@@ -355,13 +362,21 @@
    (object-array args)))
 
 (defn- build-resource
-  [^String id klass props]
+  [^String id klass props options]
   (println :BUILDING_RESOURCE id)
   (try
     (let [args-klass (Class/forName (str (.getName klass) "Args"))
           builder (.invoke ^java.lang.reflect.Method (class-method args-klass "builder") nil nil)
           args (.build (build-on builder klass props))]
-      (construct klass (str (symbol id)) args))
+      (if options
+        (let [custom-resource-options (-> (cond-> (com.pulumi.resources.CustomResourceOptions/builder)
+                                            (::option_ignoreChanges options)
+                                            (.ignoreChanges
+                                             (into-array String (->> (::option_ignoreChanges options)
+                                                                     (mapv k->attr)))))
+                                          .build)]
+          (construct klass (str (symbol id)) args custom-resource-options))
+        (construct klass (str (symbol id)) args)))
     (finally
       (println :FINISHED_BUILDING_RESOURCE id))))
 
@@ -369,12 +384,13 @@
   [resources]
   (->> resources
        (mapv (fn [[k attrs]]
-               (let [adapted-props (mapv adapt-prop (dissoc attrs ::id ::adapter))
+               (let [adapted-props (mapv adapt-prop (dissoc attrs ::id ::adapter ::options))
                      {:keys [klass]} (first adapted-props)]
                  [k
                   {:props (->> adapted-props
                                (mapv :m)
                                (apply merge))
+                   :options (::options attrs)
                    :klass klass
                    ::id (-> (::id attrs k)
                             symbol
@@ -382,9 +398,9 @@
                             (str/replace "/" "___")
                             (str/replace "." "__"))
                    ::adapter (::adapter attrs)}])))
-       (mapv (fn [[k {:keys [klass props]
+       (mapv (fn [[k {:keys [klass props options]
                       ::keys [id adapter]}]]
-               [k ((or adapter identity) (build-resource id klass props))]))
+               [k ((or adapter identity) (build-resource id klass props options))]))
        (into {})))
 
 (defn build-infra
