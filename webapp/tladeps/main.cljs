@@ -35,29 +35,22 @@
 (def tladeps-backend-url
   "https://gfxmvn9rr8.execute-api.us-east-1.amazonaws.com/tladeps__infra__handler___http-stage-48b5acf/")
 
+(defn- clipboard
+  [text]
+  (.writeText js/navigator.clipboard text))
+
 (defn build-tladeps-command
-  [{:keys [group_name jar_name version] :as jar-info}]
+  [{:keys [_group_name _jar_name _version] :as jar-info}]
   (p/let [response (js/fetch tladeps-backend-url
                              (clj->js {:method "POST"
                                        :body (js/JSON.stringify
                                               (clj->js {:jar-info jar-info}))}))
           body (p/-> (.json response)
                      (js->clj :keywordize-keys true))]
-    (println body))
-  #_(p/let [module-res (js/fetch (str "https://clojars.org/api/artifacts/"
-                                      group_name "/" jar_name))
-            module-body (.json module-res)
-            body (p/->
-                  (js/fetch (:homepage (js->clj module-body :keywordize-keys true)))
-                  .text)]
-      (let [deps
-            {(symbol (str group_name "/" jar_name))
-             {:mvn/version version
-              :tladeps/override (:tladeps/override (edn/read-string body))}}]
-        (.writeText js/navigator.clipboard
-                    (str "tladeps --tladeps-vscode --tladeps-raw-deps '"
-                         (pr-str deps)
-                         "'")))))
+    (clipboard
+     (str "tladeps --tladeps-vscode --tladeps-raw-deps '"
+          (pr-str (edn/read-string (:jar-data body)))
+          "'"))))
 
 (rum/defc deps-view
   [{:keys [search]}]
