@@ -32,34 +32,46 @@
              body (.json res)]
        (js->clj body :keywordize-keys true)))))
 
+(def tladeps-backend-url
+  "https://gfxmvn9rr8.execute-api.us-east-1.amazonaws.com/tladeps__infra__handler___http-stage-48b5acf/")
+
 (defn build-tladeps-command
-  [{:keys [group_name jar_name version]}]
-  (p/let [module-res (js/fetch (str "https://clojars.org/api/artifacts/"
-                                    group_name "/" jar_name))
-          module-body (.json module-res)
-          body (p/->
-                (js/fetch (:homepage (js->clj module-body :keywordize-keys true)))
-                .text)]
-    (let [deps
-          {(symbol (str group_name "/" jar_name))
-           {:mvn/version version
-            :tladeps/override (:tladeps/override (edn/read-string body))}}]
-      (.writeText js/navigator.clipboard
-                  (str "tladeps --tladeps-vscode --tladeps-raw-deps '"
-                       (pr-str deps)
-                       "'")))))
+  [{:keys [group_name jar_name version] :as jar-info}]
+  (p/let [response (js/fetch tladeps-backend-url
+                             (clj->js {:method "POST"
+                                       :body (js/JSON.stringify
+                                              (clj->js {:jar-info jar-info}))}))
+          body (p/-> (.json response)
+                     (js->clj :keywordize-keys true))]
+    (println body))
+  #_(p/let [module-res (js/fetch (str "https://clojars.org/api/artifacts/"
+                                      group_name "/" jar_name))
+            module-body (.json module-res)
+            body (p/->
+                  (js/fetch (:homepage (js->clj module-body :keywordize-keys true)))
+                  .text)]
+      (let [deps
+            {(symbol (str group_name "/" jar_name))
+             {:mvn/version version
+              :tladeps/override (:tladeps/override (edn/read-string body))}}]
+        (.writeText js/navigator.clipboard
+                    (str "tladeps --tladeps-vscode --tladeps-raw-deps '"
+                         (pr-str deps)
+                         "'")))))
 
 (rum/defc deps-view
   [{:keys [search]}]
   (let [[deps set-deps!] (rum/use-state nil)]
     (rum/use-effect! #(do (p/let [deps (fetch-tla-deps)]
                             (set-deps! (:results deps)))
+                          ;; Just to warm up our lambda.
+                          (js/fetch tladeps-backend-url)
                           (fn [])))
     (when deps
       [:.grid.gap-10
        (or
         (seq
-         (for [{:keys [jar_name group_name version description]
+         (for [{:keys [jar_name group_name version _description]
                 :as jar-info}
                (sort-by :jar_name deps)
                :when (if (seq (str/trim search))

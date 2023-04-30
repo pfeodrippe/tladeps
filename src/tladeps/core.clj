@@ -20,12 +20,12 @@
 (def default-module-deps
   '{io.github.pfeodrippe/tladeps-edn-module
     {:mvn/version "0.3.0"
-     :tladeps/override "TlaEdnModule.Overrides"
+     :tladeps/edn-namespaces ["tla-edn-module.core"]
      :tladeps/shortcut "edn"}
 
     io.github.pfeodrippe/tladeps-http-client-module
     {:mvn/version "0.2.0"
-     :tladeps/override "TlaHttpClientModule.Overrides"
+     :tladeps/edn-namespaces ["tla-http-client-module.core"]
      :tladeps/shortcut "http-client"}})
 
 
@@ -37,18 +37,18 @@
       :default #{}
       :validate [shortcuts (str "Available default modules are " shortcuts)]
       :update-fn conj]
-     ["" "--tladeps-raw-deps DEPS" "Dependency map in EDN format, e.g '{io.github.pfeodrippe/tladeps-edn-module {:mvn/version \"0.3.0\" :tladeps/override \"TlaEdnModule.Overrides\"}}'"]
-     ["" "--tladeps-classpath" "Returns only the classpath. You have to add tladeps overrides manually if needed, but this may be more composable if you want to keep using `java -cp ...` command to call tla tools"]
+     ["" "--tladeps-raw-deps DEPS" "Dependency map in EDN format, e.g '{io.github.pfeodrippe/tladeps-edn-module {:mvn/version \"0.3.0\" :tladeps/edn-namespaces [\"tla-edn-module.core\"]}}'"]
+     ["" "--tladeps-classpath" "Returns only the classpath. You have to add tla edn namespaces manually if needed, but this may be more composable if you want to keep using `java -cp ...` command to call tla tools"]
      ["" "--tladeps-vscode" "Returns a Java options for the TLA+ VSCode extension"]
      ["" "--tladeps-help"]]))
 
 (defn java-command
   [{:keys [:args :deps :java]
     :or {java true}}]
-  (let [overrides (->> deps vals (mapv :tladeps/override) (str/join File/pathSeparator))]
+  (let [namespaces (->> deps vals (mapcat :tladeps/edn-namespaces) (str/join ","))]
     (->> [(when java "java")
-          (if (seq overrides)
-            (str "-Dtlc2.overrides.TLCOverrides=" overrides)
+          (if (seq namespaces)
+            (str "-DTLA-EDN-Namespaces=" namespaces)
             "")
           "-cp {{classpath}}"
           (str/join " " args)]

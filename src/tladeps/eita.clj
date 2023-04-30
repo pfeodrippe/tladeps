@@ -76,16 +76,18 @@
         (.releaseIndexSearcher context searcher))))
 
   (def jar-file
-    (with-open [is (:body (http/request {:url "https://repo.clojars.org/io/github/pfeodrippe/tladeps-edn-module/0.4.0/tladeps-edn-module-0.4.0.jar"
+    (with-open [is (:body (http/request {:url "https://repo.clojars.org/io/github/pfeodrippe/tladeps-http-client-module/0.14.0/tladeps-http-client-module-0.14.0.jar"
                                          :method :get
                                          :as :stream}))
                 os (java.io.FileOutputStream. "eita.jar")]
       (clojure.java.io/copy is os)
       (java.util.jar.JarFile. (clojure.java.io/file "eita.jar"))))
 
-  (count (.entries jar-file))
+  (->> (enumeration-seq (.entries jar-file))
+       (filter (comp #(re-matches #"tladeps/exports/.*edn" %) str))
+       (mapcat #(clojure.edn/read-string (slurp (.getInputStream jar-file %)))))
 
-  (slurp (.getInputStream jar-file (.getJarEntry jar-file "Edn.tla")))
+  (slurp (.getInputStream jar-file (.getJarEntry jar-file "HttpClient.tla")))
 
 
   ())
