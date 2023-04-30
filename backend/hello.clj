@@ -93,6 +93,8 @@
                     (->> (enumeration-seq (.entries jar-file))
                          (filter (comp #(re-matches #"tladeps/exports/.*edn" %) str))
                          (mapcat #(edn/read-string (slurp (.getInputStream jar-file %))))
+                         distinct
+                         sort
                          vec)}})}
       (finally
         (Files/delete file)))))

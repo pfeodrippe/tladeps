@@ -45,7 +45,8 @@
 (defn java-command
   [{:keys [:args :deps :java]
     :or {java true}}]
-  (let [namespaces (->> deps vals (mapcat :tladeps/edn-namespaces) (str/join ","))]
+  (let [namespaces (->> deps vals (mapcat :tladeps/edn-namespaces)
+                        distinct sort (str/join ","))]
     (->> [(when java "java")
           (if (seq namespaces)
             (str "-DTLA-EDN-Namespaces=" namespaces)
