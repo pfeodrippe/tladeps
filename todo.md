@@ -13,8 +13,10 @@
 - [ ] Proxy
   - [x] Deploy lambda in Python just to see it working
   - [x] Lambda in Clojure
+  - [ ] Multiple modules should work together
   - [ ] Are we able to search and discover
     - [ ] Check the nexus maven repository index, https://repo.clojars.org/.index/
+  - [ ] Domain name
   - [ ] Get more info from clojars
   - [ ] `tladeps.edn` file from resources
   - [ ] https://repo.clojars.org/io/github/pfeodrippe/tladeps-edn-module/0.4.0/tladeps-edn-module-0.4.0.pom

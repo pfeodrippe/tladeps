@@ -6,8 +6,6 @@ This CLI is a wrapper over TLC which can fetch modules from Maven or
 Clojars. This has the following advantages:
 
 - Not bloating the TLA+ Community Modules repo;
-- You can use any JVM language to build a TLA+ module (with
-  the possibility of overrides!);
 - No need for custom repository, just use the ones you are used to, e.g. maven or clojars;
 - Ease  sharing(Perhaps? Let's see if someone will use it).
 
@@ -32,7 +30,7 @@ tlatool class), but you can also pass:
   dependencies (see below), it's a scape hatch if the
   dependency/module is not already registered here.
 - `--tladeps-classpath`, returns only the classpath. You have to add
-  overrides manually if needed, but this may be more composable
+  edn namespaces manually if needed, but this may be more composable
   if you want to keep using `java -cp ...` command to call tla tools.
 
 See examples below.
@@ -57,16 +55,4 @@ We can use the registed EDN module with `--tladeps-dep edn`.
 
 ----
 tladeps --tladeps-dep edn tlc2.TLC Abc.tla -config Abc.tla
-----
-
-Or if we don't have it registered already in this repo, we can use
-`--tladeps-raw-deps` passing a EDN map, see
-https://clojure.org/reference/deps_and_cli for more information. See
-that we have `:tladeps/override "TlaEdnModule.Overrides"` where we
-pass a override index so TLC can know which classes to use to override
-an operator. See
-https://github.com/pfeodrippe/tla-edn-module/blob/master/src/tla_edn_module/core.clj#L22.
-
-----
-tladeps --tladeps-raw-deps '{io.github.pfeodrippe/tladeps-edn-module {:mvn/version "0.3.0" :tladeps/override "TlaEdnModule.Overrides"}}' tlc2.TLC Abc.tla -config Abc.tla
 ----
