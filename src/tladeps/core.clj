@@ -89,7 +89,7 @@
 
                                                  (:tladeps-vscode options)
                                                  (str "echo "
-                                                      (java-command {:args args
+                                                      (java-command {:args []
                                                                      :deps deps
                                                                      :java false}))
 

@@ -61,6 +61,20 @@
                 :description nil
                 :created "1682832097782"}})
 
+(def body
+  {:jars [{:jar-info
+           {:jar_name "tladeps-http-client-module"
+            :group_name "io.github.pfeodrippe"
+            :version "0.14.0"
+            :description nil
+            :created "1682832097782"}}
+          {:jar-info
+           {:jar_name "tladeps-edn-module"
+            :group_name "io.github.pfeodrippe"
+            :version "0.5.0"
+            :description nil
+            :created "1682832097782"}}]})
+
 (defn build-jar-url
   [{:keys [jar_name group_name version]}]
   (format "https://repo.clojars.org/%s/%s/%s/%s-%s.jar"
@@ -86,24 +100,35 @@
                    (io/copy is os)
                    (java.util.jar.JarFile. (io/file jar-name)))]
     (try
-      {:jar-data (pr-str
-                  {(symbol (str group_name "/" jar_name))
-                   {:mvn/version version
-                    :tladeps/edn-namespaces
-                    (->> (enumeration-seq (.entries jar-file))
-                         (filter (comp #(re-matches #"tladeps/exports/.*edn" %) str))
-                         (mapcat #(edn/read-string (slurp (.getInputStream jar-file %))))
-                         distinct
-                         sort
-                         vec)}})}
+      {(symbol (str group_name "/" jar_name))
+       {:mvn/version version
+        :tladeps/edn-namespaces
+        (->> (enumeration-seq (.entries jar-file))
+             (filter (comp #(re-matches #"tladeps/exports/.*edn" %) str))
+             (mapcat #(edn/read-string (slurp (.getInputStream jar-file %))))
+             distinct
+             sort
+             vec)}}
       (finally
         (Files/delete file)))))
 
-#_(fetch-jar-data body)
+(defn handle-body
+  [{:keys [jars] :as body}]
+  {:jar-data
+   (pr-str
+    (if jars
+      (->> (:jars body)
+           (mapv fetch-jar-data)
+           (apply merge))
+      (fetch-jar-data body)))})
+
+#_(handle-body body)
 
 ;; DONE Return deps-like map
 ;; DONE Make Edn module export
-;; TODO Can select multiple deps
+;; DONE Can select multiple deps
+;; TODO Do a PR for the TLA+ extension so we can integrate 3rd party tools
+;;      Run arbitrary command
 
 (defn hello-handleRequest
   #_[{:keys [name] :or {name "Blambda"} :as event} context]
