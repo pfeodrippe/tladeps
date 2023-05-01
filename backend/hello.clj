@@ -102,7 +102,7 @@
 #_(fetch-jar-data body)
 
 ;; DONE Return deps-like map
-;; TODO Make Edn module export
+;; DONE Make Edn module export
 ;; TODO Can select multiple deps
 
 (defn hello-handleRequest

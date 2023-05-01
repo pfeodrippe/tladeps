@@ -40,31 +40,45 @@
   (.writeText js/navigator.clipboard text))
 
 (defn build-tladeps-command
-  [{:keys [_group_name _jar_name _version] :as jar-info}]
+  [{:keys [_group_name _jar_name _version] :as jar-info}
+   set-state!]
+  (set-state! {:button-text "..."})
   (p/let [response (js/fetch tladeps-backend-url
                              (clj->js {:method "POST"
                                        :body (js/JSON.stringify
                                               (clj->js {:jar-info jar-info}))}))
           body (p/-> (.json response)
                      (js->clj :keywordize-keys true))]
-    (clipboard
-     (str "tladeps --tladeps-vscode --tladeps-raw-deps '"
-          (pr-str (edn/read-string (:jar-data body)))
-          "'"))))
+    (try
+      (clipboard
+       (str "tladeps --tladeps-vscode --tladeps-raw-deps '"
+            (pr-str (edn/read-string (:jar-data body)))
+            "'"))
+      (finally
+        (set-state! {:button-text "✔"})))))
 
 (rum/defc deps-view
   [{:keys [search]}]
-  (let [[deps set-deps!] (rum/use-state nil)]
-    (rum/use-effect! #(do (p/let [deps (fetch-tla-deps)]
-                            (set-deps! (:results deps)))
-                          ;; Just to warm up our lambda.
-                          (js/fetch tladeps-backend-url)
-                          (fn [])))
+  (let [[state set-state*!] (rum/use-state nil)
+        set-state! (fn [v]
+                     (set-state*!
+                      (merge state v)))
+        {:keys [deps]} state]
+    (rum/use-effect! (fn []
+                       (p/let [deps (fetch-tla-deps)]
+                         (set-state! {:deps (->> (:results deps)
+                                                   (map-indexed (fn [idx v]
+                                                                  (merge
+                                                                   v {:button-text "Copy"
+                                                                      :idx idx})))
+                                                   vec)}))
+                       (fn []))
+                     [])
     (when deps
       [:.grid.gap-10
        (or
         (seq
-         (for [{:keys [jar_name group_name version _description]
+         (for [{:keys [jar_name group_name version _description button-text idx]
                 :as jar-info}
                (sort-by :jar_name deps)
                :when (if (seq (str/trim search))
@@ -83,9 +97,22 @@
             [:span.text-xs (grid-area :c)
              [:span.text-accent "v"]
              [:b [:span version]]]
-            [:button.btn.btn-wide (merge (grid-area :b)
-                                         {:on-click #(build-tladeps-command jar-info)})
-             "Copy"]]))
+            [:button.btn.btn-wide
+             (merge (grid-area :b)
+                    {:class (when (= button-text "✔")
+                              [:bg-secondary :text-neutral
+                               :hover:bg-accent])
+                     :on-click (fn []
+                                 (build-tladeps-command
+                                  jar-info
+                                  (fn [v]
+                                    (set-state!
+                                     (-> state
+                                         (update :deps (fn [deps]
+                                                         (mapv #(assoc % :button-text "Copy")
+                                                               deps)))
+                                         (update-in [:deps idx] merge v))))))})
+             button-text]]))
         [:b [:span.text-error "No TLA deps found!"]])])))
 
 (def tla-deps
@@ -177,6 +204,8 @@
 
 (rum/defc app
   []
+  ;; Warm up lambda.
+  (js/fetch tladeps-backend-url)
   [:div
    [:.navbar.bg-base-300
     [:a {:class "btn btn-ghost normal-case text-xl"}
