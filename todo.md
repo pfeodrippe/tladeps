@@ -10,27 +10,26 @@
     - https://github.com/weavejester/integrant#composite-keys
   - [x] Each key has a defined type which it's derived from docs
   - https://github.com/pulumi/pulumi-java/blob/main/tests/examples/testing-unit-java/src/main/java/com/pulumi/example/unittest/WebserverInfra.java
-- [ ] Proxy
+- [x] Proxy
   - [x] Deploy lambda in Python just to see it working
   - [x] Lambda in Clojure
-  - [ ] Multiple modules should work together
-  - [ ] Are we able to search and discover
-    - [ ] Check the nexus maven repository index, https://repo.clojars.org/.index/
-  - [ ] Domain name
-  - [ ] Get more info from clojars
-  - [ ] `tladeps.edn` file from resources
-  - [ ] https://repo.clojars.org/io/github/pfeodrippe/tladeps-edn-module/0.4.0/tladeps-edn-module-0.4.0.pom
-  - [ ] Scrap new POMs or continue filtering by `tladeps`?
+  - [x] Multiple modules should work together
+  - [-] Are we able to search and discover
+    - [-] Check the nexus maven repository index, https://repo.clojars.org/.index/
+  - [x] Get more info from clojars
+  - [-] `tladeps.edn` file from resources
+  - [-] https://repo.clojars.org/io/github/pfeodrippe/tladeps-edn-module/0.4.0/tladeps-edn-module-0.4.0.pom
 - [x] Create wrapper for Clojure?
   - [x] How to scrap the docs?
   - [x] How to get autocompletion?
+- [x] Make lambda faster (with SnapStart!!)
 - [ ] Type information for an attribute
-- [ ] Add `_output_` to attrs that are output only
 - [ ] Check using another registry, e.g. Github
 - [ ] Serialize cljs code?
 - [ ] Navigate with Portal through resource attributes
 - [ ] Make repo to store providers
 - [ ] Show required methods
+- [ ] Domain name
 - [ ] Make autocompletion for inputs work
 - [ ] clj-kondo linting for static values
 - [ ] Check schema as early as possible
@@ -44,6 +43,8 @@
   - https://aws.amazon.com/blogs/compute/reducing-java-cold-starts-on-aws-lambda-functions-with-snapstart/
 
 ## TLA+
+- [ ] Module for async stuff
+- [ ] Module for real-time graph
 - [ ] Run TLA+ online
   - [ ] Multiple runs
   - [ ] Small specs
@@ -54,7 +55,9 @@
 - [ ] Add button to integrate with VSCode
   - https://github.com/leanprover/vscode-lean
 - Store state spaces in SQLite using a state writer
+- [ ] Use CRaC (https://github.com/CRaC/org.crac) for TLC snapshot?
 
 ## Other
 - [ ] Typescript types in CLJ
 - [ ] Module for helping TLA+ monitoring
+- [ ] Make tutorials for one or more AWS resources + integrations

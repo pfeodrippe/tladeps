@@ -54,19 +54,20 @@
                                   "./target/tladeps-1.0.0.jar")})
     ::lambda/Function_timeout 10
     ::lambda/Function_memorySize 512
-    #_ #_::lambda/Function_snapStart {::lambda/FunctionSnapStart_applyOn "PublishedVersions"}
-    #_ #_::lambda/Function_publish true
+    ::lambda/Function_snapStart {::lambda/FunctionSnapStart_applyOn "PublishedVersions"}
+    ::lambda/Function_publish true
     ::ro/deps {::lambda-role (ro/ref ::lambda-role)}
     ::ro/handler (fn [{::keys [lambda-role]}]
                    {::lambda/Function_role (.arn lambda-role)})
     ;; Ignore runtime for now until we have java17 available in Pulumi.
     ::ro/options {::ro/option_ignoreChanges [::lambda/Function_runtime]}}
 
-   #_ #_::proxy-alias
-   {::ro/deps {::proxy (ro/ref ::proxy)}
+   ::proxy-alias
+   {::lambda/Alias_name "my-alias"
+    ::ro/deps {::proxy (ro/ref ::proxy)}
     ::ro/handler (fn [{::keys [proxy]}]
                    {::lambda/Alias_functionName (.arn proxy)
-                    ::lambda/Alias_functionVersion "1"})}
+                    ::lambda/Alias_functionVersion "$LATEST"})}
 
    ::http-endpoint
    {::api/Api_protocolType "HTTP"}
@@ -77,9 +78,9 @@
     ::ro/deps {::http-endpoint (ro/ref ::http-endpoint)
                #_ #_::proxy-alias (ro/ref ::proxy-alias)
                ::proxy (ro/ref ::proxy)}
-    ::ro/handler (fn [{::keys [http-endpoint proxy]}]
+    ::ro/handler (fn [{::keys [http-endpoint _proxy-alias proxy]}]
                    {::api/Integration_apiId (.id http-endpoint)
-                    ::api/Integration_integrationUri (.arn proxy)})}
+                    ::api/Integration_integrationUri (.qualifiedArn proxy)})}
 
    ::http-route
    {::api/Route_routeKey "ANY /{proxy+}"
@@ -107,8 +108,9 @@
     ::ro/deps {#_ #_::proxy-alias (ro/ref ::proxy-alias)
                ::proxy (ro/ref ::proxy)
                ::http-endpoint (ro/ref ::http-endpoint)}
-    ::ro/handler (fn [{::keys [proxy http-endpoint]}]
-                   {::lambda/Permission_function (.name proxy)
+    ::ro/handler (fn [{::keys [_proxy-alias proxy http-endpoint]}]
+                   {::lambda/Permission_function (.qualifiedArn proxy)
+                    #_ #_::lambda/Permission_function (.name proxy)
                     ::lambda/Permission_sourceArn (->  http-endpoint .executionArn
                                                        (ro/apply-value #(str % "/*/*")))})}})
 
