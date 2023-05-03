@@ -99,8 +99,8 @@
                    {::api/Stage_apiId (.id http-endpoint)
                     ::api/Stage_routeSettings
                     [{::api/StageRouteSetting_routeKey (.routeKey http-route)
-                      ::api/StageRouteSetting_throttlingBurstLimit 1
-                      ::api/StageRouteSetting_throttlingRateLimit 0.5}]})}
+                      ::api/StageRouteSetting_throttlingBurstLimit 50
+                      ::api/StageRouteSetting_throttlingRateLimit 100.0}]})}
 
    ::http-invoke-permission
    {::lambda/Permission_action "lambda:invokeFunction"

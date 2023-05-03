@@ -1,3 +1,20 @@
+## TLA+
+- [ ] VSCode extension
+- [ ] Module for async stuff
+- [ ] Module for real-time graph
+- [ ] Run TLA+ online
+  - [ ] Multiple runs
+  - [ ] Small specs
+  - [ ] Try it out
+    - [ ] Like we had with Guima
+- [ ] Visual Editor?
+- [ ] Enable people to create their own links to share code
+- [ ] Add button to integrate with VSCode
+  - https://github.com/leanprover/vscode-lean
+- Store state spaces in SQLite using a state writer
+- [ ] Use CRaC (https://github.com/CRaC/org.crac) for TLC snapshot?
+- [ ] Module for helping TLA+ statistics
+
 ## Pulumi
 
 - [x] Could we create resources using namespaced keywords?
@@ -42,22 +59,6 @@
   - I've tried, but Java 17 is not available nor it was working with Java 11
   - https://aws.amazon.com/blogs/compute/reducing-java-cold-starts-on-aws-lambda-functions-with-snapstart/
 
-## TLA+
-- [ ] Module for async stuff
-- [ ] Module for real-time graph
-- [ ] Run TLA+ online
-  - [ ] Multiple runs
-  - [ ] Small specs
-  - [ ] Try it out
-    - [ ] Like we had with Guima
-- [ ] Visual Editor?
-- [ ] Enable people to create their own links to share code
-- [ ] Add button to integrate with VSCode
-  - https://github.com/leanprover/vscode-lean
-- Store state spaces in SQLite using a state writer
-- [ ] Use CRaC (https://github.com/CRaC/org.crac) for TLC snapshot?
-
 ## Other
 - [ ] Typescript types in CLJ
-- [ ] Module for helping TLA+ monitoring
 - [ ] Make tutorials for one or more AWS resources + integrations

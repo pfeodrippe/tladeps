@@ -10,32 +10,33 @@
   (:import
    (java.nio.file Files)))
 
+(set! *warn-on-reflection* true)
+
 (gen-class
  :name tladeps.hello
  :implements [com.amazonaws.services.lambda.runtime.RequestStreamHandler
-              #_org.crac.Resource]
+              org.crac.Resource]
  ;; For fast compilation, see https://github.com/viesti/clj-lambda-layered/commit/6ad218cb009f9eb662675fe3fe7586bcd6c17a88
  ;; and https://docs.aws.amazon.com/lambda/latest/dg/snapstart-runtime-hooks.html.
- #_ #_:post-init register-crac
+ :post-init register-crac
  :main false
  :prefix "hello-")
 
-#_(defn hello-register-crac
+(defn hello-register-crac
   [this]
   (.register (org.crac.Core/getGlobalContext) this))
 
-#_(defn hello-beforeCheckpoint
+(defn hello-beforeCheckpoint
   [this context]
-  (.log (.getLogger context) "Before checkpoint LOGGERRR")
   (println "Before checkpoint")
   (json/write-str
    {:statusCode 200
     :body (json/write-str {:hi "TRRRR"})})
   (println "Before checkpoint done"))
 
-#_(defn hello-afterRestore
+(defn hello-afterRestore
   [this context]
-    (println "After restore"))
+  (println "After restore"))
 
 (defn json-request
   [req]
@@ -61,19 +62,19 @@
                 :description nil
                 :created "1682832097782"}})
 
-(def body
-  {:jars [{:jar-info
-           {:jar_name "tladeps-http-client-module"
-            :group_name "io.github.pfeodrippe"
-            :version "0.14.0"
-            :description nil
-            :created "1682832097782"}}
-          {:jar-info
-           {:jar_name "tladeps-edn-module"
-            :group_name "io.github.pfeodrippe"
-            :version "0.5.0"
-            :description nil
-            :created "1682832097782"}}]})
+#_(def body
+    {:jars [{:jar-info
+             {:jar_name "tladeps-http-client-module"
+              :group_name "io.github.pfeodrippe"
+              :version "0.14.0"
+              :description nil
+              :created "1682832097782"}}
+            {:jar-info
+             {:jar_name "tladeps-edn-module"
+              :group_name "io.github.pfeodrippe"
+              :version "0.5.0"
+              :description nil
+              :created "1682832097782"}}]})
 
 (defn build-jar-url
   [{:keys [jar_name group_name version]}]
@@ -95,7 +96,8 @@
         response (http/request {:url (build-jar-url jar-info)
                                 :method :get
                                 :as :stream})
-        jar-file (with-open [is (:body response)
+        ^java.util.jar.JarFile
+        jar-file (with-open [is ^java.io.InputStream (:body response)
                              os (java.io.FileOutputStream. jar-name)]
                    (io/copy is os)
                    (java.util.jar.JarFile. (io/file jar-name)))]
@@ -133,9 +135,9 @@
 (defn hello-handleRequest
   #_[{:keys [name] :or {name "Blambda"} :as event} context]
   [_ is os context]
-  (let [logger (.getLogger context)]
-    (with-open [is is
-                os os]
+  (let [logger (.getLogger ^com.amazonaws.services.lambda.runtime.Context context)]
+    (with-open [is ^java.io.InputStream is
+                os ^java.io.OutputStream os]
       (let [event (json/read-str (slurp is) :key-fn keyword)
             body  (some-> (:body event)
                           (json/read-str :key-fn keyword))
@@ -146,11 +148,16 @@
                        {:statusCode 200
                         :headers {"Access-Control-Allow-Origin" "*"}
                         :body (json/write-str {:hi "Hello!!"})})]
-        (.log logger (with-out-str
+        ;; We use a `let` here to avoid reflection complaints.
+        (let [logged (with-out-str
                        (pp/pprint
                         {:msg "Invoked with event"
                          :data {:body body
-                                :event event}})))
+                                :event event}}))]
+          (.log ^com.amazonaws.services.lambda.runtime.LambdaLogger
+                logger
+                ^String
+                logged))
         (with-open [input (io/input-stream
                            (.getBytes
                             (json/write-str response)))]
