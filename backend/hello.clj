@@ -144,7 +144,7 @@
             response (if (and body (= (:httpMethod event) "POST"))
                        {:statusCode 200
                         :headers {"Access-Control-Allow-Origin" "*"}
-                        :body (json/write-str (fetch-jar-data body))}
+                        :body (json/write-str (handle-body body))}
                        {:statusCode 200
                         :headers {"Access-Control-Allow-Origin" "*"}
                         :body (json/write-str {:hi "Hello!!"})})]

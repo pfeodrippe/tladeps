@@ -1,5 +1,7 @@
 ## TLA+
 - [ ] VSCode extension
+  - [ ] Run arbitrary command to put something into the classpath
+  - [ ] Visual selection of deps
 - [ ] Module for async stuff
 - [ ] Module for real-time graph
 - [ ] Run TLA+ online
@@ -11,9 +13,18 @@
 - [ ] Enable people to create their own links to share code
 - [ ] Add button to integrate with VSCode
   - https://github.com/leanprover/vscode-lean
-- Store state spaces in SQLite using a state writer
+- [ ] Add a way to dynamically load a state writer in TLC (besides other hooks)
+  - [-] Check for a property that receives the name of a class that implements SW
+  - [-] Hook for setting command line properties?
+  - [ ] ITLCHooks interface (through a property)
+- [ ] Store state spaces in SQLite using a state writer
 - [ ] Use CRaC (https://github.com/CRaC/org.crac) for TLC snapshot?
 - [ ] Module for helping TLA+ statistics
+- [ ] Allow people to publish packages
+- [ ] Download and run tladeps automatically?
+- [ ] Tree-sitter for TLA+?
+  - There is already one, https://github.com/tlaplus-community/tree-sitter-tlaplus
+  - [ ] LSP?
 
 ## Pulumi
 
